@@ -1,11 +1,12 @@
 import os
 import random
 import string
+import sys
 from datetime import datetime
 
 from controller import KeyboardListener
 from decoder import PNGSequence
-from hintings import FrameType, FramesType, RowType, EffectModeType
+from hintings import FrameType, FramesType, RowType, MatrixType, EffectModeType
 
 ASCII_CHARACTERS = "".join((string.digits, string.ascii_letters, string.punctuation))
 BINARY_CHARACTERS = "01" * 32
@@ -225,6 +226,23 @@ class Fake3DSceneGame(Backend):
 
     def __init__(self) -> None:
         self._keyboard_listener = KeyboardListener()
+        self._dot = (10.0, 20.0, 30.0)
+        self._camera = [0.0, 0.0, 0.0]
+
+    @staticmethod
+    def matrix_transpose(matrix: MatrixType) -> MatrixType:
+        return list(map(list, zip(*matrix)))
+
+    @staticmethod
+    def matrix_multiply(matrix_a: MatrixType, matrix_b: MatrixType) -> MatrixType:
+        matrix2_transpose = Fake3DSceneGame.matrix_transpose(matrix_b)
+        return [
+            [
+                sum(element_a * element_b for element_a, element_b in zip(row, column))
+                for column in matrix2_transpose
+            ]
+            for row in matrix_a
+        ]
 
     @property
     def frames(self) -> FramesType:
@@ -234,6 +252,7 @@ class Fake3DSceneGame(Backend):
                 [(255, 255, 255, 255, ord(" ")) for _ in range(0, screen_width)]
                 for _ in range(0, screen_height)
             ]
+            "█"  # dot string
             key = self._keyboard_listener.get()
             if key == "w":
                 pass
@@ -262,5 +281,5 @@ class Fake3DSceneGame(Backend):
             elif key in ("\x03", "\x1a", "\x1b", "\x1c"):
                 print("Manually Interrupted", flush=True)
                 self._keyboard_listener.stop()
-                exit(0)
+                sys.exit(0)
             yield frame_buffer

@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-import atexit
-
 try:
     from msvcrt import getwch  # type: ignore
 except ImportError:
@@ -21,13 +19,10 @@ except ImportError:
         """
         Gets a single character from STDIO.
         """
-
         tty.setraw(sys.stdin.fileno())  # type: ignore
         character = sys.stdin.read(1)
         _reset_stdin_tty()
         return character
-
-    atexit.register(_reset_stdin_tty)
 
 
 from queue import Queue
