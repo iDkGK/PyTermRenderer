@@ -3,6 +3,7 @@ import random
 import string
 from datetime import datetime
 
+from controller import KeyboardListener
 from decoder import PNGSequence
 from hintings import FrameType, FramesType, RowType, EffectModeType
 
@@ -217,4 +218,49 @@ class DigitalTimeUnit(Backend):
                                 c = ord(character)
                     row_buffer.append((fr, fg, fb, fa, c))
                 frame_buffer.append(row_buffer)
+            yield frame_buffer
+
+
+class Fake3DSceneGame(Backend):
+
+    def __init__(self) -> None:
+        self._keyboard_listener = KeyboardListener()
+
+    @property
+    def frames(self) -> FramesType:
+        while True:
+            screen_width, screen_height = os.get_terminal_size()
+            frame_buffer = [
+                [(255, 255, 255, 255, ord(" ")) for _ in range(0, screen_width)]
+                for _ in range(0, screen_height)
+            ]
+            key = self._keyboard_listener.get()
+            if key == "w":
+                pass
+            elif key == "s":
+                pass
+            elif key == "a":
+                pass
+            elif key == "d":
+                pass
+            elif key == "W":
+                pass
+            elif key == "S":
+                pass
+            elif key == "A":
+                pass
+            elif key == "D":
+                pass
+            elif key == "\xe0H":
+                pass
+            elif key == "\xe0P":
+                pass
+            elif key == "\xe0K":
+                pass
+            elif key == "\xe0M":
+                pass
+            elif key in ("\x03", "\x1a", "\x1b", "\x1c"):
+                print("Manually Interrupted", flush=True)
+                self._keyboard_listener.stop()
+                exit(0)
             yield frame_buffer

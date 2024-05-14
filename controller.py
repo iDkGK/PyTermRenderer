@@ -75,7 +75,7 @@ class KeyboardListener(metaclass=SingletonMeta):
             if len(self._combination_keys) == 2:
                 hit_key = "".join(self._combination_keys)
                 self._combination_keys.clear()
-            if hit_key == "à":
+            if hit_key == "\xe0":
                 self._combination_keys.append(hit_key)
             else:
                 self._hit_key_counter += 1
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     while True:
         hit_key = keyboard_listener.get(block=True)
         hit_key_hex = hit_key.encode().hex()
-        print("\033[sHit Key: %s, Hex Code: %s\033[u" % (hit_key, hit_key_hex))
+        print("\x1b[sHit Key: %s, Hex Code: %s\x1b[u" % (hit_key, hit_key_hex))
         if hit_key_hex in ("03", "1a", "1b", "1c"):
             keyboard_listener.stop()
             break

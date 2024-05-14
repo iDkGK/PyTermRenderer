@@ -13,21 +13,21 @@ class InvalidRenderModeError(Exception):
 
 class _Renderer(object):
     """
-    "\033[39m\033[39m"                 - Reset color
-    "\033[<L>;<C>H" OR "\033[<L>;<C>f" - Puts the cursor at y L and x C.
-    "\033[<N>A"                        - Move the cursor up N rows
-    "\033[<N>B"                        - Move the cursor down N rows
-    "\033[<N>C"                        - Move the cursor forward N columns
-    "\033[<N>D"                        - Move the cursor backward N columns
-    "\033[2J"                          - Clear the screen, move to (0,0)
-    "\033[2K"                          - Clear row
-    "\033[K"                           - Erase to end of row
-    "\033[s"                           - Save cursor position
-    "\033[u"                           - Restore cursor position
-    "\033[4m"                          - Underline on
-    "\033[24m"                         - Underline off
-    "\033[1m"                          - Bold on
-    "\033[21m"                         - Bold off
+    "\x1b[39m\x1b[39m"                 - Reset color
+    "\x1b[<L>;<C>H" OR "\x1b[<L>;<C>f" - Puts the cursor at y L and x C.
+    "\x1b[<N>A"                        - Move the cursor up N rows
+    "\x1b[<N>B"                        - Move the cursor down N rows
+    "\x1b[<N>C"                        - Move the cursor forward N columns
+    "\x1b[<N>D"                        - Move the cursor backward N columns
+    "\x1b[2J"                          - Clear the screen, move to (0,0)
+    "\x1b[2K"                          - Clear row
+    "\x1b[K"                           - Erase to end of row
+    "\x1b[s"                           - Save cursor position
+    "\x1b[u"                           - Restore cursor position
+    "\x1b[4m"                          - Underline on
+    "\x1b[24m"                         - Underline off
+    "\x1b[1m"                          - Bold on
+    "\x1b[21m"                         - Bold off
     """
 
     SHORT_ASCII_SEQUENCE = "@%#*+=-:. "[::-1]
@@ -65,7 +65,7 @@ class _Renderer(object):
         if terminal_width <= string_length:
             return
         print(
-            end="\033[0m\033[%d;%dH%s\033[%d;1H"
+            end="\x1b[0m\x1b[%d;%dH%s\x1b[%d;1H"
             % (
                 terminal_height // 2,
                 (terminal_width - string_length) // 2,
@@ -77,6 +77,8 @@ class _Renderer(object):
 
     @classmethod
     def render(cls, frame: FrameType, fps: int, mode: RenderModeType):
+        if not frame:
+            return
         terminal_width, terminal_height = os.get_terminal_size()
         frame_width, frame_height = len(frame[0]), len(frame)
         frame_buffer: list[str] = []
@@ -101,7 +103,7 @@ class _Renderer(object):
                     ):
                         fr, fg, fb, fa, c = frame[frame_y][frame_x]
                         frame_buffer.append(
-                            "\033[%d;%dH\033[38;2;%d;%d;%d;%dm%c"
+                            "\x1b[%d;%dH\x1b[38;2;%d;%d;%d;%dm%c"
                             % (y, x, fr, fg, fb, fa // 255, c)
                         )
         elif mode == "ascii":
@@ -117,7 +119,7 @@ class _Renderer(object):
                             r * cls.R_FACTOR + g * cls.G_FACTOR + b * cls.B_FACTOR
                         )
                         frame_buffer.append(
-                            "\033[%d;%dH%c"
+                            "\x1b[%d;%dH%c"
                             % (
                                 y,
                                 x,
@@ -155,7 +157,7 @@ class _Renderer(object):
                             * 255
                         )
                         frame_buffer.append(
-                            "\033[%d;%dH\033[38;2;%d;%d;%d;%dm█"
+                            "\x1b[%d;%dH\x1b[38;2;%d;%d;%d;%dm█"
                             % (y, x, r, g, b, a // 255)
                         )
         elif mode == "rgba":
@@ -168,7 +170,7 @@ class _Renderer(object):
                     ):
                         r, g, b, a = frame[frame_y][frame_x]
                         frame_buffer.append(
-                            "\033[%d;%dH\033[38;2;%d;%d;%d;%dm█"
+                            "\x1b[%d;%dH\x1b[38;2;%d;%d;%d;%dm█"
                             % (y, x, r, g, b, a // 255)
                         )
         else:
@@ -180,11 +182,11 @@ class _Renderer(object):
         )
         cls._fps_counters.append(1 / (time.perf_counter() - cls._time_counter))
         cls._time_counter = time.perf_counter()
-        print(end="\033];%.1f fps\a" % cls._fps_counters[-1], flush=True)
+        print(end="\x1b];%.1f fps\a" % cls._fps_counters[-1], flush=True)
 
     @staticmethod
     def clear(mode: int):
-        print(end="\033[%sJ" % mode, flush=True)
+        print(end="\x1b[%sJ" % mode, flush=True)
 
 
 atexit.register(_Renderer.__display_average_fps__)
