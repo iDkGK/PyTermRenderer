@@ -9,7 +9,8 @@ CallableType = Callable
 RowType = list[tuple[int, ...]]
 FrameType = list[RowType]
 FramesType = Iterable[FrameType]
-MatrixType = list[list[int | float]]
+MatrixRowType = list[int | float] | list[int] | list[float]
+MatrixType = list[list[int | float]] | list[list[int] | list[float]]
 
 # Others
 EffectModeType = Literal["ascii", "binary", "short", "standard", "long"]

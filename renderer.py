@@ -67,8 +67,8 @@ class _Renderer(object):
         print(
             end="\x1b[0m\x1b[%d;%dH%s\x1b[%d;1H"
             % (
-                terminal_height // 2,
-                (terminal_width - string_length) // 2,
+                terminal_height // 2 + 1,
+                (terminal_width - string_length) // 2 + 1,
                 average_fps,
                 terminal_height - 1,
             ),
@@ -104,7 +104,7 @@ class _Renderer(object):
                         fr, fg, fb, fa, c = frame[frame_y][frame_x]
                         frame_buffer.append(
                             "\x1b[%d;%dH\x1b[38;2;%d;%d;%d;%dm%c"
-                            % (y, x, fr, fg, fb, fa // 255, c)
+                            % (y + 1, x + 1, fr, fg, fb, fa // 255, c)
                         )
         elif mode == "ascii":
             for y in range(0, terminal_height):
@@ -121,8 +121,8 @@ class _Renderer(object):
                         frame_buffer.append(
                             "\x1b[%d;%dH%c"
                             % (
-                                y,
-                                x,
+                                y + 1,
+                                x + 1,
                                 cls.SHORT_ASCII_SEQUENCE[
                                     round(
                                         (
@@ -158,7 +158,7 @@ class _Renderer(object):
                         )
                         frame_buffer.append(
                             "\x1b[%d;%dH\x1b[38;2;%d;%d;%d;%dm█"
-                            % (y, x, r, g, b, a // 255)
+                            % (y + 1, x + 1, r, g, b, a // 255)
                         )
         elif mode == "rgba":
             for y in range(0, terminal_height):
@@ -171,7 +171,7 @@ class _Renderer(object):
                         r, g, b, a = frame[frame_y][frame_x]
                         frame_buffer.append(
                             "\x1b[%d;%dH\x1b[38;2;%d;%d;%d;%dm█"
-                            % (y, x, r, g, b, a // 255)
+                            % (y + 1, x + 1, r, g, b, a // 255)
                         )
         else:
             raise InvalidRenderModeError('unknown render mode - "%s"' % mode)

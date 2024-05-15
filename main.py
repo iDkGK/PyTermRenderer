@@ -5,7 +5,7 @@ from multiprocessing import Process, Queue
 from pathlib import Path
 from threading import Lock
 
-from backend import TheMatrixCodeRain, DigitalTimeUnit, Fake3DSceneGame
+from backend import TheMatrixCodeRain, DigitalTimeUnit
 from controller import KeyboardListener
 from decoder import PNG, PNGSequence
 from hintings import FramesType
@@ -31,12 +31,6 @@ def play_code_rain_animation(fps: int = 15):
 def play_digital_clock_animation(fps: int = 10):
     time_clock = DigitalTimeUnit()
     for frame in time_clock.frames:
-        render_frame(frame, fps=fps)
-
-
-def play_fake_3d_scene_game(fps: int = 60):
-    scene_game = Fake3DSceneGame()
-    for frame in scene_game.frames:
         render_frame(frame, fps=fps)
 
 
@@ -178,7 +172,6 @@ if __name__ == "__main__":
     clear_terminal()
     # play_code_rain_animation(fps=15)
     # play_digital_clock_animation(fps=10)
-    play_fake_3d_scene_game(fps=60)
     # display_static_png_image(fps=1)
     # play_dynamic_png_images_ascii(fps=15)
     # decode_png_images_in_parallel()

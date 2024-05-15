@@ -6,7 +6,7 @@ from datetime import datetime
 
 from controller import KeyboardListener
 from decoder import PNGSequence
-from hintings import FrameType, FramesType, RowType, MatrixType, EffectModeType
+from hintings import FrameType, FramesType, RowType, EffectModeType
 
 ASCII_CHARACTERS = "".join((string.digits, string.ascii_letters, string.punctuation))
 BINARY_CHARACTERS = "01" * 32
@@ -226,23 +226,6 @@ class Fake3DSceneGame(Backend):
 
     def __init__(self) -> None:
         self._keyboard_listener = KeyboardListener()
-        self._dot = (10.0, 20.0, 30.0)
-        self._camera = [0.0, 0.0, 0.0]
-
-    @staticmethod
-    def matrix_transpose(matrix: MatrixType) -> MatrixType:
-        return list(map(list, zip(*matrix)))
-
-    @staticmethod
-    def matrix_multiply(matrix_a: MatrixType, matrix_b: MatrixType) -> MatrixType:
-        matrix2_transpose = Fake3DSceneGame.matrix_transpose(matrix_b)
-        return [
-            [
-                sum(element_a * element_b for element_a, element_b in zip(row, column))
-                for column in matrix2_transpose
-            ]
-            for row in matrix_a
-        ]
 
     @property
     def frames(self) -> FramesType:
