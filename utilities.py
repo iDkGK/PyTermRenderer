@@ -76,24 +76,26 @@ def matrix_multiply(*matrices: MatrixType) -> MatrixType:
 
 
 class Vector(object):
-    def __init__(self, x: int, y: int) -> None:
+    def __init__(self, x: float, y: float) -> None:
         self._x = x
         self._y = y
 
-    def __matmul__(self, other: "Vector") -> int:
+    def __matmul__(self, other: "Vector") -> float:
         return self._x * other._x + self._y * other._y
 
-    def __rmatmul__(self, other: "Vector") -> int:
+    def __rmatmul__(self, other: "Vector") -> float:
         return other._x * self._x + other._y * self._y
 
 
 class Triangle(object):
     def __init__(
         self,
-        vertex_a: tuple[int, int],
-        vertex_b: tuple[int, int],
-        vertex_c: tuple[int, int],
+        null: bool = False,
+        vertex_a: tuple[float, float] = (0.0, 0.0),
+        vertex_b: tuple[float, float] = (0.0, 0.0),
+        vertex_c: tuple[float, float] = (0.0, 0.0),
     ) -> None:
+        self._null = null
         self._x_a, self._y_a = vertex_a
         x_b, y_b = vertex_b
         x_c, y_c = vertex_c
@@ -105,6 +107,8 @@ class Triangle(object):
         self._p_ac_ab = self._v_ac @ self._v_ab
 
     def __contains__(self, point: tuple[int, int]) -> bool:
+        if self._null:
+            return False
         x_p, y_p = point
         v_ap = Vector(x_p - self._x_a, y_p - self._y_a)
         p_ap_ab, p_ap_ac = v_ap @ self._v_ab, v_ap @ self._v_ac

@@ -11,6 +11,9 @@ FrameType = list[RowType]
 FramesType = Iterable[FrameType]
 MatrixRowType = list[int | float] | list[int] | list[float]
 MatrixType = list[list[int | float]] | list[list[int] | list[float]]
+TriangleVerticesType = tuple[
+    tuple[float, float, float], tuple[float, float, float], tuple[float, float, float]
+]
 
 # Others
 EffectModeType = Literal["ascii", "binary", "short", "standard", "long"]

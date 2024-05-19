@@ -65,8 +65,9 @@ class _Renderer(object):
         if terminal_width <= string_length:
             return
         print(
-            end="\x1b[0m\x1b[s\x1b[%d;%dH%s\x1b[u"  # end, save, move, restore
+            end="\x1b[0m\x1b[%d;1H\x1b[s\x1b[%d;%dH%s\x1b[u"  # end, save, move, restore
             % (
+                terminal_height - 1,
                 terminal_height // 2 + 1,
                 (terminal_width - string_length) // 2 + 1,
                 average_fps,
