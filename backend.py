@@ -346,5 +346,5 @@ class Fake3DSceneGame(Backend):
                             ),
                         )
                     )
-                frame_buffer.append(row_buffer)
+                frame_buffer.insert(0, row_buffer)
             yield frame_buffer
