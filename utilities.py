@@ -99,28 +99,33 @@ class Triangle(object):
         self._x_a, self._y_a = vertex_a
         x_b, y_b = vertex_b
         x_c, y_c = vertex_c
-        self._v_ac = Vector(x_c - self._x_a, y_c - self._y_a)
         self._v_ab = Vector(x_b - self._x_a, y_b - self._y_a)
+        self._v_ac = Vector(x_c - self._x_a, y_c - self._y_a)
         self._p_ab_ab = self._v_ab @ self._v_ab
         self._p_ac_ac = self._v_ac @ self._v_ac
         self._p_ab_ac = self._v_ab @ self._v_ac
         self._p_ac_ab = self._v_ac @ self._v_ab
+        self._d_ab_ab_ac_ac_ac_ab_ac_ab = (
+            self._p_ab_ab * self._p_ac_ac - self._p_ac_ab * self._p_ac_ab
+        )
 
-    def __contains__(self, point: tuple[int, int]) -> bool:
+    def __contains__(self, point: tuple[float, float]) -> bool:
         if self._null:
             return False
         x_p, y_p = point
         v_ap = Vector(x_p - self._x_a, y_p - self._y_a)
         p_ap_ab, p_ap_ac = v_ap @ self._v_ab, v_ap @ self._v_ac
+        d_ap_ab_ac_ac_ap_ac_ab_ac = p_ap_ab * self._p_ac_ac - p_ap_ac * self._p_ab_ac
+        if d_ap_ab_ac_ac_ap_ac_ab_ac < 0.0:
+            return False
+        d_ap_ac_ab_ab_ap_ab_ac_ab = p_ap_ac * self._p_ab_ab - p_ap_ab * self._p_ac_ab
+        if d_ap_ac_ab_ab_ap_ab_ac_ab < 0.0:
+            return False
         if (
-            p_ap_ac * self._p_ab_ab - p_ap_ab * self._p_ac_ab >= 0
-            and p_ap_ab * self._p_ac_ac - p_ap_ac * self._p_ab_ac >= 0
-            and (
-                (p_ap_ac * self._p_ab_ab - p_ap_ab * self._p_ac_ab)
-                + (p_ap_ab * self._p_ac_ac - p_ap_ac * self._p_ab_ac)
-                - (self._p_ac_ac * self._p_ab_ab - self._p_ac_ab * self._p_ac_ab)
-            )
-            <= 0
+            d_ap_ab_ac_ac_ap_ac_ab_ac
+            + d_ap_ac_ab_ab_ap_ab_ac_ab
+            - self._d_ab_ab_ac_ac_ac_ab_ac_ab
+            > 0.0
         ):
-            return True
-        return False
+            return False
+        return True

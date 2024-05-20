@@ -25,7 +25,7 @@ except ImportError:
         return character
 
 
-from queue import Queue
+from queue import LifoQueue
 from threading import Thread, Event
 
 from hintings import AnyType, CallableType
@@ -56,7 +56,7 @@ class KeyboardListener(metaclass=SingletonMeta):
         """Create an object of KeyboardListener to respond to keyboard inputs"""
         self._stopping_event = Event()
         self._hit_key_counter = 0
-        self._hit_key_queue: Queue[str] = Queue()
+        self._hit_key_queue: LifoQueue[str] = LifoQueue()
         self._callback_registry: dict[str, list[CallableType[..., AnyType]]] = {}
         self._combination_keys: list[str] = []
         self._listen_thread = Thread(target=self._listen, daemon=True)
@@ -94,7 +94,9 @@ class KeyboardListener(metaclass=SingletonMeta):
         if self._stopping_event.is_set():
             return ""
         if block or not self._hit_key_queue.empty():
-            return self._hit_key_queue.get()
+            key = self._hit_key_queue.get()
+            self._hit_key_queue.queue.clear()
+            return key
         return ""
 
     def register(
