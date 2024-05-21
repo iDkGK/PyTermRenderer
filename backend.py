@@ -224,17 +224,109 @@ class DigitalTimeUnit(Backend):
             yield frame_buffer
 
 
-class Fake3DSceneGame(Backend):
+class Camera(object):
+    def __init__(
+        self,
+        fov: float,
+        coordinate: tuple[float, float, float],
+        rotation: tuple[float, float, float],
+        move_speed: float = 2.0,
+        rotate_speed: float = 1.0,
+    ) -> None:
+        self._fov = fov
+        self._x, self._y, self._z = coordinate
+        self._original_coordinate = coordinate
+        self._yaw, self._pitch, self._roll = rotation
+        self._original_rotation = rotation
+        self._move_speed = move_speed
+        self._dash_speed = move_speed * 5.0
+        self._rotate_speed = rotate_speed
+        self._update_trigonometric()
 
+    def _update_trigonometric(self) -> None:
+        yaw_radians = math.radians(-self._yaw)
+        pitch_radians = math.radians(self._pitch)
+        roll_radians = math.radians(self._roll)
+        self._sin_yaw = math.sin(yaw_radians)
+        self._cos_yaw = math.cos(yaw_radians)
+        self._sin_pitch = math.sin(pitch_radians)
+        self._cos_pitch = math.cos(pitch_radians)
+        self._sin_roll = math.sin(roll_radians)
+        self._cos_roll = math.cos(roll_radians)
+        self._vector_x = (  # X component
+            self._cos_yaw * self._sin_pitch * self._cos_roll
+            + self._sin_yaw * self._sin_roll
+        )
+        self._vector_y = (  # Y component
+            self._sin_yaw * self._sin_pitch * self._cos_roll
+            - self._cos_yaw * self._sin_roll
+        )
+        self._vector_z = self._cos_pitch * self._cos_roll  # Z component
+
+    @property
+    def fov(self) -> float:
+        return self._fov
+
+    @property
+    def coordinate(self) -> tuple[float, float, float]:
+        return (self._x, self._y, self._z)
+
+    @property
+    def rotation(self) -> tuple[float, float, float]:
+        return (self._yaw, self._pitch, self._roll)
+
+    @property
+    def trigonometrics(self) -> tuple[float, float, float, float, float, float]:
+        return (
+            self._sin_yaw,
+            self._cos_yaw,
+            self._sin_pitch,
+            self._cos_pitch,
+            self._sin_roll,
+            self._cos_roll,
+        )
+
+    @property
+    def vector(self) -> tuple[float, float, float]:
+        return (self._vector_x, self._vector_y, self._vector_z)
+
+    def move(self, x: float = 0.0, y: float = 0.0, z: float = 0.0) -> None:
+        self._x += self._move_speed * x
+        self._y += self._move_speed * y
+        self._z += self._move_speed * z
+
+    def dash(self, x: float = 0.0, y: float = 0.0, z: float = 0.0) -> None:
+        self._x += self._dash_speed * x
+        self._y += self._dash_speed * y
+        self._z += self._dash_speed * z
+
+    def rotate(self, yaw: float = 0.0, pitch: float = 0.0, roll: float = 0.0) -> None:
+        self._yaw += yaw
+        self._pitch += pitch
+        self._roll += roll
+        self._yaw = max(min(self._yaw, 90.0), -90.0)
+        self._pitch %= 360.0
+        self._roll %= 360.0
+        self._update_trigonometric()
+
+    def reset(self) -> None:
+        self._x, self._y, self._z = self._original_coordinate
+        self._yaw, self._pitch, self._roll = self._original_rotation
+        self._update_trigonometric()
+
+
+class Fake3DSceneGame(Backend):
     def __init__(self) -> None:
         screen_width, screen_height = os.get_terminal_size()
         # Width:height of single character of terminal is about 1:2
         # So we make width twice as its original value
         screen_width, screen_height = screen_width // 2 or 1, screen_height or 1
         self._keyboard_listener = KeyboardListener()
-        self._camera_fov = screen_height * screen_height / screen_width
-        self._camera_coordinate = [0.0, 0.0, 0.0]  # camera coordinate
-        self._camera_rotation = [0.0, 0.0, 0.0]  # Camera X/Y/Z rotations in degrees
+        self._camera = Camera(
+            screen_height * screen_height / screen_width,
+            (0.0, 0.0, 0.0),
+            (0.0, 0.0, 0.0),
+        )
         self._triangle_vertices = [
             ((-25.0, -25.0, 50.0), (-25.0, 25.0, 50.0), (25.0, -25.0, 50.0)),  # ◣
             ((25.0, 25.0, 50.0), (25.0, -25.0, 50.0), (-25.0, 25.0, 50.0)),  # ◥
@@ -242,245 +334,206 @@ class Fake3DSceneGame(Backend):
             ((25.0, 25.0, 100.0), (25.0, -25.0, 100.0), (-25.0, 25.0, 100.0)),  # ◹
         ]
 
-    @property
-    def frames(self) -> FramesType:
+    def _update_triangles(self):
+        # Triangles
         self._triangles: list[Triangle] = []
+        # Camera properties
+        camera_fov = self._camera.fov
+        camera_x, camera_y, camera_z = self._camera.coordinate
+        (
+            camear_sin_yaw,
+            camear_cos_yaw,
+            camear_sin_pitch,
+            camear_cos_pitch,
+            camear_sin_roll,
+            camear_cos_roll,
+        ) = self._camera.trigonometrics
+        # Iteration over all triangles
+        # Assuming that every triangle is ▲abc
         for triangle_vertices in self._triangle_vertices:
-            x_p, y_p, z_p = self._camera_coordinate
-            xd_p, yd_p, zd_p = self._camera_rotation
-            (x_a, y_a, z_a), (x_b, y_b, z_b), (x_c, y_c, z_c) = triangle_vertices
+            (
+                (triangle_a_x, triangle_a_y, triangle_a_z),
+                (triangle_b_x, triangle_b_y, triangle_b_z),
+                (triangle_c_x, triangle_c_y, triangle_c_z),
+            ) = triangle_vertices
             # Position
             # Using vector for relative position
-            vx_ap, vy_ap, vz_ap = x_a - x_p, y_a - y_p, z_a - z_p
-            vx_bp, vy_bp, vz_bp = x_b - x_p, y_b - y_p, z_b - z_p
-            vx_cp, vy_cp, vz_cp = x_c - x_p, y_c - y_p, z_c - z_p
+            (
+                distance_camera_triangle_a_x,
+                distance_camera_triangle_a_y,
+                distance_camera_triangle_a_z,
+            ) = (
+                triangle_a_x - camera_x,
+                triangle_a_y - camera_y,
+                triangle_a_z - camera_z,
+            )
+            (
+                distance_camera_triangle_b_x,
+                distance_camera_triangle_b_y,
+                distance_camera_triangle_b_z,
+            ) = (
+                triangle_b_x - camera_x,
+                triangle_b_y - camera_y,
+                triangle_b_z - camera_z,
+            )
+            (
+                distance_camera_triangle_c_x,
+                distance_camera_triangle_c_y,
+                distance_camera_triangle_c_z,
+            ) = (
+                triangle_c_x - camera_x,
+                triangle_c_y - camera_y,
+                triangle_c_z - camera_z,
+            )
             # Rotation
-            # Trigonometric values of X/Y/Z rotations
-            xr_p, yr_p, zr_p = (
-                math.radians(-xd_p),
-                math.radians(yd_p),
-                math.radians(zd_p),
-            )
-            xs_p, xc_p, ys_p, yc_p, zs_p, zc_p = (
-                math.sin(xr_p),
-                math.cos(xr_p),
-                math.sin(yr_p),
-                math.cos(yr_p),
-                math.sin(zr_p),
-                math.cos(zr_p),
-            )
             # X-axis rotation that affects Y/Z coordinates
-            vy_ap, vz_ap = vy_ap * xc_p + vz_ap * xs_p, vz_ap * xc_p - vy_ap * xs_p
-            vy_bp, vz_bp = vy_bp * xc_p + vz_bp * xs_p, vz_bp * xc_p - vy_bp * xs_p
-            vy_cp, vz_cp = vy_cp * xc_p + vz_cp * xs_p, vz_cp * xc_p - vy_cp * xs_p
+            distance_camera_triangle_a_y, distance_camera_triangle_a_z = (
+                distance_camera_triangle_a_y * camear_cos_yaw
+                + distance_camera_triangle_a_z * camear_sin_yaw,
+                distance_camera_triangle_a_z * camear_cos_yaw
+                - distance_camera_triangle_a_y * camear_sin_yaw,
+            )
+            distance_camera_triangle_b_y, distance_camera_triangle_b_z = (
+                distance_camera_triangle_b_y * camear_cos_yaw
+                + distance_camera_triangle_b_z * camear_sin_yaw,
+                distance_camera_triangle_b_z * camear_cos_yaw
+                - distance_camera_triangle_b_y * camear_sin_yaw,
+            )
+            distance_camera_triangle_c_y, distance_camera_triangle_c_z = (
+                distance_camera_triangle_c_y * camear_cos_yaw
+                + distance_camera_triangle_c_z * camear_sin_yaw,
+                distance_camera_triangle_c_z * camear_cos_yaw
+                - distance_camera_triangle_c_y * camear_sin_yaw,
+            )
             # Y-axis rotation that affects X/Z coordinates
-            vx_ap, vz_ap = vx_ap * yc_p - vz_ap * ys_p, vx_ap * ys_p + vz_ap * yc_p
-            vx_bp, vz_bp = vx_bp * yc_p - vz_bp * ys_p, vx_bp * ys_p + vz_bp * yc_p
-            vx_cp, vz_cp = vx_cp * yc_p - vz_cp * ys_p, vx_cp * ys_p + vz_cp * yc_p
+            distance_camera_triangle_a_x, distance_camera_triangle_a_z = (
+                distance_camera_triangle_a_x * camear_cos_pitch
+                - distance_camera_triangle_a_z * camear_sin_pitch,
+                distance_camera_triangle_a_x * camear_sin_pitch
+                + distance_camera_triangle_a_z * camear_cos_pitch,
+            )
+            distance_camera_triangle_b_x, distance_camera_triangle_b_z = (
+                distance_camera_triangle_b_x * camear_cos_pitch
+                - distance_camera_triangle_b_z * camear_sin_pitch,
+                distance_camera_triangle_b_x * camear_sin_pitch
+                + distance_camera_triangle_b_z * camear_cos_pitch,
+            )
+            distance_camera_triangle_c_x, distance_camera_triangle_c_z = (
+                distance_camera_triangle_c_x * camear_cos_pitch
+                - distance_camera_triangle_c_z * camear_sin_pitch,
+                distance_camera_triangle_c_x * camear_sin_pitch
+                + distance_camera_triangle_c_z * camear_cos_pitch,
+            )
             # Z-axis rotation that affects X/Y coordinates
-            vx_ap, vy_ap = vx_ap * zc_p - vy_ap * zs_p, vx_ap * zs_p + vy_ap * zc_p
-            vx_bp, vy_bp = vx_bp * zc_p - vy_bp * zs_p, vx_bp * zs_p + vy_bp * zc_p
-            vx_cp, vy_cp = vx_cp * zc_p - vy_cp * zs_p, vx_cp * zs_p + vy_cp * zc_p
+            distance_camera_triangle_a_x, distance_camera_triangle_a_y = (
+                distance_camera_triangle_a_x * camear_cos_roll
+                - distance_camera_triangle_a_y * camear_sin_roll,
+                distance_camera_triangle_a_x * camear_sin_roll
+                + distance_camera_triangle_a_y * camear_cos_roll,
+            )
+            distance_camera_triangle_b_x, distance_camera_triangle_b_y = (
+                distance_camera_triangle_b_x * camear_cos_roll
+                - distance_camera_triangle_b_y * camear_sin_roll,
+                distance_camera_triangle_b_x * camear_sin_roll
+                + distance_camera_triangle_b_y * camear_cos_roll,
+            )
+            distance_camera_triangle_c_x, distance_camera_triangle_c_y = (
+                distance_camera_triangle_c_x * camear_cos_roll
+                - distance_camera_triangle_c_y * camear_sin_roll,
+                distance_camera_triangle_c_x * camear_sin_roll
+                + distance_camera_triangle_c_y * camear_cos_roll,
+            )
             # Simple culling. TODO: advanced culling mechanism.
-            if vz_ap <= 0.0 or vz_bp <= 0.0 or vz_cp <= 0.0:
+            if (
+                distance_camera_triangle_a_z <= 0.0
+                or distance_camera_triangle_b_z <= 0.0
+                or distance_camera_triangle_c_z <= 0.0
+            ):
                 self._triangles.append(Triangle(null=True))
             else:
                 self._triangles.append(
                     Triangle(
                         vertex_a=(
-                            (vx_ap) * self._camera_fov / (vz_ap),
-                            (vy_ap) * self._camera_fov / (vz_ap),
+                            (distance_camera_triangle_a_x)
+                            * camera_fov
+                            / (distance_camera_triangle_a_z),
+                            (distance_camera_triangle_a_y)
+                            * camera_fov
+                            / (distance_camera_triangle_a_z),
                         ),
                         vertex_b=(
-                            (vx_bp) * self._camera_fov / (vz_bp),
-                            (vy_bp) * self._camera_fov / (vz_bp),
+                            (distance_camera_triangle_b_x)
+                            * camera_fov
+                            / (distance_camera_triangle_b_z),
+                            (distance_camera_triangle_b_y)
+                            * camera_fov
+                            / (distance_camera_triangle_b_z),
                         ),
                         vertex_c=(
-                            (vx_cp) * self._camera_fov / (vz_cp),
-                            (vy_cp) * self._camera_fov / (vz_cp),
+                            (distance_camera_triangle_c_x)
+                            * camera_fov
+                            / (distance_camera_triangle_c_z),
+                            (distance_camera_triangle_c_y)
+                            * camera_fov
+                            / (distance_camera_triangle_c_z),
                         ),
                     )
                 )
+
+    @property
+    def frames(self) -> FramesType:
+        self._update_triangles()
         while True:
             screen_width, screen_height = os.get_terminal_size()
             screen_width, screen_height = screen_width // 2 or 1, screen_height or 1
             half_width, half_height = (screen_width // 2, screen_height // 2)
             key = self._keyboard_listener.get()
-            frame_buffer: FrameType = []
+            # Camera controlling
             # Position
-            xd_p, yd_p, zd_p = self._camera_rotation
-            # Trigonometric values of X/Y/Z rotations
-            xr_p, yr_p, zr_p = (
-                math.radians(-xd_p),
-                math.radians(yd_p),
-                math.radians(zd_p),
-            )
-            xs_p, xc_p, ys_p, yc_p, zs_p, zc_p = (
-                math.sin(xr_p),
-                math.cos(xr_p),
-                math.sin(yr_p),
-                math.cos(yr_p),
-                math.sin(zr_p),
-                math.cos(zr_p),
-            )
-            cv_x, cv_y, cv_z = (
-                xc_p * ys_p * zc_p + xs_p * zs_p,
-                xs_p * ys_p * zc_p - xc_p * zs_p,
-                yc_p * zc_p,
-            )
+            camera_vector_x, camera_vector_y, camera_vector_z = self._camera.vector
             if key == "w":
-                self._camera_coordinate[0] += 2.0 * cv_x
-                self._camera_coordinate[1] += 2.0 * cv_y
-                self._camera_coordinate[2] += 2.0 * cv_z
+                self._camera.move(camera_vector_x, camera_vector_y, camera_vector_z)
             elif key == "s":
-                self._camera_coordinate[0] -= 2.0 * cv_x
-                self._camera_coordinate[1] -= 2.0 * cv_y
-                self._camera_coordinate[2] -= 2.0 * cv_z
+                self._camera.move(-camera_vector_x, -camera_vector_y, -camera_vector_z)
             elif key == "a":
-                self._camera_coordinate[0] -= 2.0 * cv_z
-                self._camera_coordinate[1] -= 2.0 * cv_y
-                self._camera_coordinate[2] += 2.0 * cv_x
+                self._camera.move(-camera_vector_z, -camera_vector_y, camera_vector_x)
             elif key == "d":
-                self._camera_coordinate[0] += 2.0 * cv_z
-                self._camera_coordinate[1] += 2.0 * cv_y
-                self._camera_coordinate[2] -= 2.0 * cv_x
+                self._camera.move(camera_vector_z, camera_vector_y, -camera_vector_x)
             elif key == "W":
-                self._camera_coordinate[0] += 8.0 * cv_x
-                self._camera_coordinate[1] += 8.0 * cv_y
-                self._camera_coordinate[2] += 8.0 * cv_z
+                self._camera.move(camera_vector_x, camera_vector_y, camera_vector_z)
             elif key == "S":
-                self._camera_coordinate[0] -= 8.0 * cv_x
-                self._camera_coordinate[1] -= 8.0 * cv_y
-                self._camera_coordinate[2] -= 8.0 * cv_z
+                self._camera.move(-camera_vector_x, -camera_vector_y, -camera_vector_z)
             elif key == "A":
-                self._camera_coordinate[0] -= 8.0 * cv_z
-                self._camera_coordinate[1] -= 8.0 * cv_y
-                self._camera_coordinate[2] += 8.0 * cv_x
+                self._camera.move(-camera_vector_z, -camera_vector_y, camera_vector_x)
             elif key == "D":
-                self._camera_coordinate[0] += 8.0 * cv_z
-                self._camera_coordinate[1] += 8.0 * cv_y
-                self._camera_coordinate[2] -= 8.0 * cv_x
+                self._camera.move(camera_vector_z, camera_vector_y, -camera_vector_x)
             elif key == " ":
-                self._camera_coordinate[1] += 2.0
+                self._camera.move(y=camera_vector_y)
             elif key == "\r":
-                self._camera_coordinate[1] -= 2.0
+                self._camera.move(y=-camera_vector_y)
             # Rotation
-            elif key == "8":
-                self._camera_rotation[0] += 1.0
-                self._camera_rotation[0] = max(
-                    min(self._camera_rotation[0], 90.0), -90.0
-                )
+            if key == "8":
+                self._camera.rotate(yaw=1.0)
             elif key == "2":
-                self._camera_rotation[0] -= 1.0
-                self._camera_rotation[0] = max(
-                    min(self._camera_rotation[0], 90.0), -90.0
-                )
+                self._camera.rotate(yaw=-1.0)
             elif key == "4":
-                self._camera_rotation[1] -= 1.0
-                self._camera_rotation[1] %= 360.0
+                self._camera.rotate(pitch=-1.0)
             elif key == "6":
-                self._camera_rotation[1] += 1.0
-                self._camera_rotation[1] %= 360.0
+                self._camera.rotate(pitch=1.0)
             elif key == "e":
-                self._camera_rotation[2] += 1.0
-                self._camera_rotation[2] %= 360.0
+                self._camera.rotate(roll=1.0)
             elif key == "q":
-                self._camera_rotation[2] -= 1.0
-                self._camera_rotation[2] %= 360.0
+                self._camera.rotate(roll=-1.0)
             # Reset
             if key == "5":
-                self._camera_coordinate = [0.0, 0.0, 0.0]
-                self._camera_rotation = [0.0, 0.0, 0.0]
+                self._camera.reset()
+            # Exit
             if key in ("\x03", "\x1a", "\x1c"):
                 self._keyboard_listener.stop()
                 sys.exit(0)
             if key:
-                self._triangles: list[Triangle] = []
-                for triangle_vertices in self._triangle_vertices:
-                    x_p, y_p, z_p = self._camera_coordinate
-                    xd_p, yd_p, zd_p = self._camera_rotation
-                    (x_a, y_a, z_a), (x_b, y_b, z_b), (x_c, y_c, z_c) = (
-                        triangle_vertices
-                    )
-                    # Position
-                    # Using vector for relative position
-                    vx_ap, vy_ap, vz_ap = x_a - x_p, y_a - y_p, z_a - z_p
-                    vx_bp, vy_bp, vz_bp = x_b - x_p, y_b - y_p, z_b - z_p
-                    vx_cp, vy_cp, vz_cp = x_c - x_p, y_c - y_p, z_c - z_p
-                    # Rotation
-                    # Trigonometric values of X/Y/Z rotations
-                    xr_p, yr_p, zr_p = (
-                        math.radians(-xd_p),
-                        math.radians(yd_p),
-                        math.radians(zd_p),
-                    )
-                    xs_p, xc_p, ys_p, yc_p, zs_p, zc_p = (
-                        math.sin(xr_p),
-                        math.cos(xr_p),
-                        math.sin(yr_p),
-                        math.cos(yr_p),
-                        math.sin(zr_p),
-                        math.cos(zr_p),
-                    )
-                    # X-axis rotation that affects Y/Z coordinates
-                    vy_ap, vz_ap = (
-                        vy_ap * xc_p + vz_ap * xs_p,
-                        vz_ap * xc_p - vy_ap * xs_p,
-                    )
-                    vy_bp, vz_bp = (
-                        vy_bp * xc_p + vz_bp * xs_p,
-                        vz_bp * xc_p - vy_bp * xs_p,
-                    )
-                    vy_cp, vz_cp = (
-                        vy_cp * xc_p + vz_cp * xs_p,
-                        vz_cp * xc_p - vy_cp * xs_p,
-                    )
-                    # Y-axis rotation that affects X/Z coordinates
-                    vx_ap, vz_ap = (
-                        vx_ap * yc_p - vz_ap * ys_p,
-                        vx_ap * ys_p + vz_ap * yc_p,
-                    )
-                    vx_bp, vz_bp = (
-                        vx_bp * yc_p - vz_bp * ys_p,
-                        vx_bp * ys_p + vz_bp * yc_p,
-                    )
-                    vx_cp, vz_cp = (
-                        vx_cp * yc_p - vz_cp * ys_p,
-                        vx_cp * ys_p + vz_cp * yc_p,
-                    )
-                    # Z-axis rotation that affects X/Y coordinates
-                    vx_ap, vy_ap = (
-                        vx_ap * zc_p - vy_ap * zs_p,
-                        vx_ap * zs_p + vy_ap * zc_p,
-                    )
-                    vx_bp, vy_bp = (
-                        vx_bp * zc_p - vy_bp * zs_p,
-                        vx_bp * zs_p + vy_bp * zc_p,
-                    )
-                    vx_cp, vy_cp = (
-                        vx_cp * zc_p - vy_cp * zs_p,
-                        vx_cp * zs_p + vy_cp * zc_p,
-                    )
-                    # Simple culling. TODO: advanced culling mechanism.
-                    if vz_ap <= 0.0 or vz_bp <= 0.0 or vz_cp <= 0.0:
-                        self._triangles.append(Triangle(null=True))
-                    else:
-                        self._triangles.append(
-                            Triangle(
-                                vertex_a=(
-                                    (vx_ap) * self._camera_fov / (vz_ap),
-                                    (vy_ap) * self._camera_fov / (vz_ap),
-                                ),
-                                vertex_b=(
-                                    (vx_bp) * self._camera_fov / (vz_bp),
-                                    (vy_bp) * self._camera_fov / (vz_bp),
-                                ),
-                                vertex_c=(
-                                    (vx_cp) * self._camera_fov / (vz_cp),
-                                    (vy_cp) * self._camera_fov / (vz_cp),
-                                ),
-                            )
-                        )
+                self._update_triangles()
+            frame_buffer: FrameType = []
             for y in range(0, screen_height):
                 row_buffer: RowType = []
                 for x in range(0, screen_width):
