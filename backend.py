@@ -486,7 +486,7 @@ class Fake3DSceneGame(Backend):
         while True:
             screen_width, screen_height = os.get_terminal_size()
             screen_width, screen_height = screen_width // 2 or 1, screen_height or 1
-            half_width, half_height = (screen_width // 2, screen_height // 2)
+            half_width, half_height = (screen_width / 2, screen_height / 2)
             key = self._keyboard_listener.get()
             # Camera controlling
             # Position
