@@ -253,15 +253,9 @@ class Camera(object):
         self._cos_pitch = math.cos(pitch_radians)
         self._sin_roll = math.sin(roll_radians)
         self._cos_roll = math.cos(roll_radians)
-        self._vector_x = (  # X component
-            self._cos_yaw * self._sin_pitch * self._cos_roll
-            + self._sin_yaw * self._sin_roll
-        )
-        self._vector_y = (  # Y component
-            self._sin_yaw * self._sin_pitch * self._cos_roll
-            - self._cos_yaw * self._sin_roll
-        )
-        self._vector_z = self._cos_pitch * self._cos_roll  # Z component
+        self._vector_x = self._sin_pitch  # X component
+        self._vector_y = 0  # Y component
+        self._vector_z = self._cos_pitch  # Z component
 
     @property
     def fov(self) -> float:
@@ -290,17 +284,35 @@ class Camera(object):
     def vector(self) -> tuple[float, float, float]:
         return (self._vector_x, self._vector_y, self._vector_z)
 
-    def move(self, x: float = 0.0, y: float = 0.0, z: float = 0.0) -> None:
+    def move(
+        self,
+        *,
+        x: float = 0.0,
+        y: float = 0.0,
+        z: float = 0.0,
+    ) -> None:
         self._x += self._move_speed * x
         self._y += self._move_speed * y
         self._z += self._move_speed * z
 
-    def dash(self, x: float = 0.0, y: float = 0.0, z: float = 0.0) -> None:
+    def dash(
+        self,
+        *,
+        x: float = 0.0,
+        y: float = 0.0,
+        z: float = 0.0,
+    ) -> None:
         self._x += self._dash_speed * x
         self._y += self._dash_speed * y
         self._z += self._dash_speed * z
 
-    def rotate(self, yaw: float = 0.0, pitch: float = 0.0, roll: float = 0.0) -> None:
+    def rotate(
+        self,
+        *,
+        yaw: float = 0.0,
+        pitch: float = 0.0,
+        roll: float = 0.0,
+    ) -> None:
         self._yaw += yaw
         self._pitch += pitch
         self._roll += roll
@@ -318,9 +330,8 @@ class Camera(object):
 class Fake3DSceneGame(Backend):
     def __init__(self) -> None:
         screen_width, screen_height = os.get_terminal_size()
-        # Width:height of single character of terminal is about 1:2
-        # So we make width twice as its original value
-        screen_width, screen_height = screen_width // 2 or 1, screen_height or 1
+        screen_width = (screen_width // 2) * 2 or 1
+        screen_height = screen_height - 3 or 1
         self._keyboard_listener = KeyboardListener()
         self._camera = Camera(
             screen_height * screen_height / screen_width,
@@ -485,45 +496,46 @@ class Fake3DSceneGame(Backend):
         self._update_triangles()
         while True:
             screen_width, screen_height = os.get_terminal_size()
-            screen_width, screen_height = screen_width // 2 or 1, screen_height or 1
-            half_width, half_height = (screen_width / 2, screen_height / 2)
+            screen_width = (screen_width // 2) * 2 or 1
+            screen_height = screen_height - 3 or 1
+            half_width, half_height = screen_width / 2, screen_height / 2
             key = self._keyboard_listener.get()
             # Camera controlling
             # Position
-            camera_vector_x, camera_vector_y, camera_vector_z = self._camera.vector
+            camera_vector_x, _, camera_vector_z = self._camera.vector
             if key == "w":
-                self._camera.move(camera_vector_x, camera_vector_y, camera_vector_z)
+                self._camera.move(x=+camera_vector_x, z=+camera_vector_z)
             elif key == "s":
-                self._camera.move(-camera_vector_x, -camera_vector_y, -camera_vector_z)
+                self._camera.move(x=-camera_vector_x, z=-camera_vector_z)
             elif key == "a":
-                self._camera.move(-camera_vector_z, -camera_vector_y, camera_vector_x)
+                self._camera.move(x=-camera_vector_z, z=+camera_vector_x)
             elif key == "d":
-                self._camera.move(camera_vector_z, camera_vector_y, -camera_vector_x)
+                self._camera.move(x=+camera_vector_z, z=-camera_vector_x)
             elif key == "W":
-                self._camera.move(camera_vector_x, camera_vector_y, camera_vector_z)
+                self._camera.dash(x=+camera_vector_x, z=+camera_vector_z)
             elif key == "S":
-                self._camera.move(-camera_vector_x, -camera_vector_y, -camera_vector_z)
+                self._camera.dash(x=-camera_vector_x, z=-camera_vector_z)
             elif key == "A":
-                self._camera.move(-camera_vector_z, -camera_vector_y, camera_vector_x)
+                self._camera.dash(x=-camera_vector_z, z=+camera_vector_x)
             elif key == "D":
-                self._camera.move(camera_vector_z, camera_vector_y, -camera_vector_x)
+                self._camera.dash(x=+camera_vector_z, z=-camera_vector_x)
             elif key == " ":
-                self._camera.move(y=camera_vector_y)
+                self._camera.move(y=+1.0)
             elif key == "\r":
-                self._camera.move(y=-camera_vector_y)
+                self._camera.move(y=-1.0)
             # Rotation
             if key == "8":
-                self._camera.rotate(yaw=1.0)
+                self._camera.rotate(yaw=+1.0)
             elif key == "2":
                 self._camera.rotate(yaw=-1.0)
             elif key == "4":
                 self._camera.rotate(pitch=-1.0)
             elif key == "6":
-                self._camera.rotate(pitch=1.0)
-            elif key == "e":
-                self._camera.rotate(roll=1.0)
-            elif key == "q":
-                self._camera.rotate(roll=-1.0)
+                self._camera.rotate(pitch=+1.0)
+            # elif key == "e":
+            #     self._camera.rotate(roll=+1.0)
+            # elif key == "q":
+            #     self._camera.rotate(roll=-1.0)
             # Reset
             if key == "5":
                 self._camera.reset()
@@ -546,7 +558,7 @@ class Fake3DSceneGame(Backend):
                             ord(
                                 "█"
                                 if any(
-                                    (x - half_width, y - half_height) in triangle
+                                    ((x - half_width) / 2, y - half_height) in triangle
                                     for triangle in self._triangles
                                 )
                                 else " "
@@ -554,4 +566,14 @@ class Fake3DSceneGame(Backend):
                         )
                     )
                 frame_buffer.insert(0, row_buffer)
+            for camera_info in (
+                "Camera FOV: %f" % self._camera.fov,
+                "Camera coordinate (X, Y, Z): (%f, %f, %f)" % self._camera.coordinate,
+                "Camera rotation (Yaw, Pitch, Roll): (%f, %f, %f)"
+                % self._camera.rotation,
+            ):
+                row_buffer: RowType = []
+                for character in camera_info.ljust(screen_width)[:screen_width]:
+                    row_buffer.append((255, 255, 255, 255, ord(character)))
+                frame_buffer.append(row_buffer)
             yield frame_buffer
