@@ -230,20 +230,16 @@ class Camera(object):
         fov: float,
         coordinate: tuple[float, float, float],
         rotation: tuple[float, float, float],
-        move_speed: float = 2.0,
-        rotate_speed: float = 1.0,
     ) -> None:
         self._fov = fov
         self._x, self._y, self._z = coordinate
         self._original_coordinate = coordinate
         self._yaw, self._pitch, self._roll = rotation
         self._original_rotation = rotation
-        self._move_speed = move_speed
-        self._dash_speed = move_speed * 5.0
-        self._rotate_speed = rotate_speed
-        self._update_trigonometric()
+        self._update_trigonometrics()
+        self._update_vector()
 
-    def _update_trigonometric(self) -> None:
+    def _update_trigonometrics(self) -> None:
         yaw_radians = math.radians(-self._yaw)
         pitch_radians = math.radians(self._pitch)
         roll_radians = math.radians(self._roll)
@@ -253,9 +249,21 @@ class Camera(object):
         self._cos_pitch = math.cos(pitch_radians)
         self._sin_roll = math.sin(roll_radians)
         self._cos_roll = math.cos(roll_radians)
+
+    def _update_vector(self) -> None:
         self._vector_x = self._sin_pitch  # X component
         self._vector_y = 0  # Y component
+        # (self._cos_yaw * self._sin_roll - self._sin_yaw * self._cos_roll)
         self._vector_z = self._cos_pitch  # Z component
+
+    @property
+    def info(self) -> tuple[str, ...]:
+        return (
+            "Camera FOV: %f" % self.fov,
+            "Camera coordinate (X, Y, Z): (%f, %f, %f)" % self.coordinate,
+            "Camera rotation (Yaw, Pitch, Roll): (%f, %f, %f)" % self.rotation,
+            "Camera direction vector (X, Y, Z): (%f, %f, %f)" % self.vector,
+        )
 
     @property
     def fov(self) -> float:
@@ -270,7 +278,7 @@ class Camera(object):
         return (self._yaw, self._pitch, self._roll)
 
     @property
-    def trigonometrics(self) -> tuple[float, float, float, float, float, float]:
+    def trigonometricss(self) -> tuple[float, float, float, float, float, float]:
         return (
             self._sin_yaw,
             self._cos_yaw,
@@ -284,65 +292,44 @@ class Camera(object):
     def vector(self) -> tuple[float, float, float]:
         return (self._vector_x, self._vector_y, self._vector_z)
 
-    def move(
-        self,
-        *,
-        x: float = 0.0,
-        y: float = 0.0,
-        z: float = 0.0,
-    ) -> None:
-        self._x += self._move_speed * x
-        self._y += self._move_speed * y
-        self._z += self._move_speed * z
+    def move(self, *, x: float = 0.0, y: float = 0.0, z: float = 0.0) -> None:
+        self._x += x
+        self._y += y
+        self._z += z
 
-    def dash(
-        self,
-        *,
-        x: float = 0.0,
-        y: float = 0.0,
-        z: float = 0.0,
-    ) -> None:
-        self._x += self._dash_speed * x
-        self._y += self._dash_speed * y
-        self._z += self._dash_speed * z
+    def dash(self, *, x: float = 0.0, y: float = 0.0, z: float = 0.0) -> None:
+        self._x += x * 2
+        self._y += y * 2
+        self._z += z * 2
 
     def rotate(
-        self,
-        *,
-        yaw: float = 0.0,
-        pitch: float = 0.0,
-        roll: float = 0.0,
+        self, *, yaw: float = 0.0, pitch: float = 0.0, roll: float = 0.0
     ) -> None:
         self._yaw += yaw
         self._pitch += pitch
         self._roll += roll
-        self._yaw = max(min(self._yaw, 90.0), -90.0)
-        self._pitch %= 360.0
-        self._roll %= 360.0
-        self._update_trigonometric()
+        # self._yaw = max(min(self._yaw, 90.0), -90.0)
+        # self._pitch %= 360.0
+        # self._roll %= 360.0
+        self._update_trigonometrics()
+        self._update_vector()
 
     def reset(self) -> None:
         self._x, self._y, self._z = self._original_coordinate
         self._yaw, self._pitch, self._roll = self._original_rotation
-        self._update_trigonometric()
+        self._update_trigonometrics()
+        self._update_vector()
 
 
 class Fake3DSceneGame(Backend):
     def __init__(self) -> None:
-        screen_width, screen_height = os.get_terminal_size()
-        screen_width = (screen_width // 2) * 2 or 1
-        screen_height = screen_height - 3 or 1
         self._keyboard_listener = KeyboardListener()
-        self._camera = Camera(
-            screen_height * screen_height / screen_width,
-            (0.0, 0.0, 0.0),
-            (0.0, 0.0, 0.0),
-        )
+        self._camera = Camera(15, (0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
         self._triangle_vertices = [
-            ((-25.0, -25.0, 50.0), (-25.0, 25.0, 50.0), (25.0, -25.0, 50.0)),  # ◣
-            ((25.0, 25.0, 50.0), (25.0, -25.0, 50.0), (-25.0, 25.0, 50.0)),  # ◥
-            ((-25.0, -25.0, 100.0), (-25.0, 25.0, 100.0), (25.0, -25.0, 100.0)),  # ◺
-            ((25.0, 25.0, 100.0), (25.0, -25.0, 100.0), (-25.0, 25.0, 100.0)),  # ◹
+            ((-25.0, -25.0, -25.0), (-25.0, 25.0, -25.0), (25.0, -25.0, -25.0)),  # ◣
+            ((25.0, 25.0, -25.0), (25.0, -25.0, -25.0), (-25.0, 25.0, -25.0)),  # ◥
+            ((-25.0, -25.0, 25.0), (-25.0, 25.0, 25.0), (25.0, -25.0, 25.0)),  # ◺
+            ((25.0, 25.0, 25.0), (25.0, -25.0, 25.0), (-25.0, 25.0, 25.0)),  # ◹
         ]
 
     def _update_triangles(self):
@@ -358,7 +345,7 @@ class Fake3DSceneGame(Backend):
             camera_cos_pitch,
             camera_sin_roll,
             camera_cos_roll,
-        ) = self._camera.trigonometrics
+        ) = self._camera.trigonometricss
         # Iteration over all triangles
         # Assuming that every triangle is ▲abc
         for triangle_vertices in self._triangle_vertices:
@@ -397,24 +384,24 @@ class Fake3DSceneGame(Backend):
                 triangle_c_z - camera_z,
             )
             # Rotation
-            # X-axis rotation that affects Y/Z coordinates
-            distance_camera_triangle_a_y, distance_camera_triangle_a_z = (
-                distance_camera_triangle_a_y * camera_cos_yaw
-                + distance_camera_triangle_a_z * camera_sin_yaw,
-                distance_camera_triangle_a_z * camera_cos_yaw
-                - distance_camera_triangle_a_y * camera_sin_yaw,
+            # Z-axis rotation that affects X/Y coordinates
+            distance_camera_triangle_a_x, distance_camera_triangle_a_y = (
+                distance_camera_triangle_a_x * camera_cos_roll
+                + distance_camera_triangle_a_y * camera_sin_roll,
+                -distance_camera_triangle_a_x * camera_sin_roll
+                + distance_camera_triangle_a_y * camera_cos_roll,
             )
-            distance_camera_triangle_b_y, distance_camera_triangle_b_z = (
-                distance_camera_triangle_b_y * camera_cos_yaw
-                + distance_camera_triangle_b_z * camera_sin_yaw,
-                distance_camera_triangle_b_z * camera_cos_yaw
-                - distance_camera_triangle_b_y * camera_sin_yaw,
+            distance_camera_triangle_b_x, distance_camera_triangle_b_y = (
+                distance_camera_triangle_b_x * camera_cos_roll
+                + distance_camera_triangle_b_y * camera_sin_roll,
+                -distance_camera_triangle_b_x * camera_sin_roll
+                + distance_camera_triangle_b_y * camera_cos_roll,
             )
-            distance_camera_triangle_c_y, distance_camera_triangle_c_z = (
-                distance_camera_triangle_c_y * camera_cos_yaw
-                + distance_camera_triangle_c_z * camera_sin_yaw,
-                distance_camera_triangle_c_z * camera_cos_yaw
-                - distance_camera_triangle_c_y * camera_sin_yaw,
+            distance_camera_triangle_c_x, distance_camera_triangle_c_y = (
+                distance_camera_triangle_c_x * camera_cos_roll
+                + distance_camera_triangle_c_y * camera_sin_roll,
+                -distance_camera_triangle_c_x * camera_sin_roll
+                + distance_camera_triangle_c_y * camera_cos_roll,
             )
             # Y-axis rotation that affects X/Z coordinates
             distance_camera_triangle_a_x, distance_camera_triangle_a_z = (
@@ -435,24 +422,24 @@ class Fake3DSceneGame(Backend):
                 distance_camera_triangle_c_x * camera_sin_pitch
                 + distance_camera_triangle_c_z * camera_cos_pitch,
             )
-            # Z-axis rotation that affects X/Y coordinates
-            distance_camera_triangle_a_x, distance_camera_triangle_a_y = (
-                distance_camera_triangle_a_x * camera_cos_roll
-                - distance_camera_triangle_a_y * camera_sin_roll,
-                distance_camera_triangle_a_x * camera_sin_roll
-                + distance_camera_triangle_a_y * camera_cos_roll,
+            # X-axis rotation that affects Y/Z coordinates
+            distance_camera_triangle_a_y, distance_camera_triangle_a_z = (
+                distance_camera_triangle_a_y * camera_cos_yaw
+                + distance_camera_triangle_a_z * camera_sin_yaw,
+                -distance_camera_triangle_a_y * camera_sin_yaw
+                + distance_camera_triangle_a_z * camera_cos_yaw,
             )
-            distance_camera_triangle_b_x, distance_camera_triangle_b_y = (
-                distance_camera_triangle_b_x * camera_cos_roll
-                - distance_camera_triangle_b_y * camera_sin_roll,
-                distance_camera_triangle_b_x * camera_sin_roll
-                + distance_camera_triangle_b_y * camera_cos_roll,
+            distance_camera_triangle_b_y, distance_camera_triangle_b_z = (
+                distance_camera_triangle_b_y * camera_cos_yaw
+                + distance_camera_triangle_b_z * camera_sin_yaw,
+                -distance_camera_triangle_b_y * camera_sin_yaw
+                + distance_camera_triangle_b_z * camera_cos_yaw,
             )
-            distance_camera_triangle_c_x, distance_camera_triangle_c_y = (
-                distance_camera_triangle_c_x * camera_cos_roll
-                - distance_camera_triangle_c_y * camera_sin_roll,
-                distance_camera_triangle_c_x * camera_sin_roll
-                + distance_camera_triangle_c_y * camera_cos_roll,
+            distance_camera_triangle_c_y, distance_camera_triangle_c_z = (
+                distance_camera_triangle_c_y * camera_cos_yaw
+                + distance_camera_triangle_c_z * camera_sin_yaw,
+                -distance_camera_triangle_c_y * camera_sin_yaw
+                + distance_camera_triangle_c_z * camera_cos_yaw,
             )
             # Simple culling. TODO: advanced culling mechanism.
             if (
@@ -493,49 +480,50 @@ class Fake3DSceneGame(Backend):
 
     @property
     def frames(self) -> FramesType:
+        camera_info_length = len(self._camera.info)
         self._update_triangles()
         while True:
             screen_width, screen_height = os.get_terminal_size()
             screen_width = (screen_width // 2) * 2 or 1
-            screen_height = screen_height - 3 or 1
+            screen_height = screen_height - camera_info_length or 1
             half_width, half_height = screen_width / 2, screen_height / 2
             key = self._keyboard_listener.get()
             # Camera controlling
             # Position
             camera_vector_x, _, camera_vector_z = self._camera.vector
             if key == "w":
-                self._camera.move(x=+camera_vector_x, z=+camera_vector_z)
+                self._camera.move(x=+camera_vector_x, y=+0.0, z=+camera_vector_z)
             elif key == "s":
-                self._camera.move(x=-camera_vector_x, z=-camera_vector_z)
+                self._camera.move(x=-camera_vector_x, y=+0.0, z=-camera_vector_z)
             elif key == "a":
-                self._camera.move(x=-camera_vector_z, z=+camera_vector_x)
+                self._camera.move(x=-camera_vector_z, y=+0.0, z=+camera_vector_x)
             elif key == "d":
-                self._camera.move(x=+camera_vector_z, z=-camera_vector_x)
+                self._camera.move(x=+camera_vector_z, y=+0.0, z=-camera_vector_x)
             elif key == "W":
-                self._camera.dash(x=+camera_vector_x, z=+camera_vector_z)
+                self._camera.dash(x=+camera_vector_x, y=+0.0, z=+camera_vector_z)
             elif key == "S":
-                self._camera.dash(x=-camera_vector_x, z=-camera_vector_z)
+                self._camera.dash(x=-camera_vector_x, y=+0.0, z=-camera_vector_z)
             elif key == "A":
-                self._camera.dash(x=-camera_vector_z, z=+camera_vector_x)
+                self._camera.dash(x=-camera_vector_z, y=+0.0, z=+camera_vector_x)
             elif key == "D":
-                self._camera.dash(x=+camera_vector_z, z=-camera_vector_x)
+                self._camera.dash(x=+camera_vector_z, y=+0.0, z=-camera_vector_x)
             elif key == " ":
-                self._camera.move(y=+1.0)
+                self._camera.move(x=0.0, y=+1.0, z=0.0)
             elif key == "\r":
-                self._camera.move(y=-1.0)
+                self._camera.move(x=0.0, y=-1.0, z=0.0)
             # Rotation
             if key == "8":
-                self._camera.rotate(yaw=+1.0)
+                self._camera.rotate(yaw=+1.0, pitch=0.0, roll=0.0)
             elif key == "2":
-                self._camera.rotate(yaw=-1.0)
+                self._camera.rotate(yaw=-1.0, pitch=0.0, roll=0.0)
             elif key == "4":
-                self._camera.rotate(pitch=-1.0)
+                self._camera.rotate(yaw=0.0, pitch=-1.0, roll=0.0)
             elif key == "6":
-                self._camera.rotate(pitch=+1.0)
+                self._camera.rotate(yaw=0.0, pitch=+1.0, roll=0.0)
             elif key == "e":
-                self._camera.rotate(roll=+1.0)
+                self._camera.rotate(yaw=0.0, pitch=0.0, roll=+1.0)
             elif key == "q":
-                self._camera.rotate(roll=-1.0)
+                self._camera.rotate(yaw=0.0, pitch=0.0, roll=-1.0)
             # Reset
             if key == "5":
                 self._camera.reset()
@@ -566,12 +554,7 @@ class Fake3DSceneGame(Backend):
                         )
                     )
                 frame_buffer.insert(0, row_buffer)
-            for camera_info in (
-                "Camera FOV: %f" % self._camera.fov,
-                "Camera coordinate (X, Y, Z): (%f, %f, %f)" % self._camera.coordinate,
-                "Camera rotation (Yaw, Pitch, Roll): (%f, %f, %f)"
-                % self._camera.rotation,
-            ):
+            for camera_info in self._camera.info:
                 row_buffer: RowType = []
                 for character in camera_info.ljust(screen_width)[:screen_width]:
                     row_buffer.append((255, 255, 255, 255, ord(character)))
