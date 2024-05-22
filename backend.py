@@ -551,35 +551,35 @@ class Fake3DSceneGame(Backend):
             # Position
             if self._keyboard is not None:
                 # Forward
-                if self._keyboard.is_pressed("w"):
-                    self._camera.move_forward()
-                elif self._keyboard.is_pressed("shift+w"):
+                if self._keyboard.is_pressed("shift+w"):
                     self._camera.dash_forward()
+                elif self._keyboard.is_pressed("w"):
+                    self._camera.move_forward()
                 # Backward
-                if self._keyboard.is_pressed("s"):
-                    self._camera.move_backward()
-                elif self._keyboard.is_pressed("shift+s"):
+                if self._keyboard.is_pressed("shift+s"):
                     self._camera.dash_backward()
+                elif self._keyboard.is_pressed("s"):
+                    self._camera.move_backward()
                 # Leftward
-                if self._keyboard.is_pressed("a"):
-                    self._camera.move_leftward()
-                elif self._keyboard.is_pressed("shift+a"):
+                if self._keyboard.is_pressed("shift+a"):
                     self._camera.dash_leftward()
+                elif self._keyboard.is_pressed("a"):
+                    self._camera.move_leftward()
                 # Rightward
-                if self._keyboard.is_pressed("d"):
-                    self._camera.move_rightward()
-                elif self._keyboard.is_pressed("shift+d"):
+                if self._keyboard.is_pressed("shift+d"):
                     self._camera.dash_rightward()
+                elif self._keyboard.is_pressed("d"):
+                    self._camera.move_rightward()
                 # Upward
-                if self._keyboard.is_pressed("space"):
-                    self._camera.move_upward()
-                elif self._keyboard.is_pressed("shift+space"):
+                if self._keyboard.is_pressed("shift+space"):
                     self._camera.dash_up()
+                elif self._keyboard.is_pressed("space"):
+                    self._camera.move_upward()
                 # Downward
-                if self._keyboard.is_pressed("ctrl"):
-                    self._camera.move_downward()
-                elif self._keyboard.is_pressed("ctrl+shift"):
+                if self._keyboard.is_pressed("ctrl+shift"):
                     self._camera.dash_down()
+                elif self._keyboard.is_pressed("ctrl"):
+                    self._camera.move_downward()
                 # Reset
                 if self._keyboard.is_pressed("r"):
                     self._camera.reset()
@@ -601,25 +601,25 @@ class Fake3DSceneGame(Backend):
                 key = self._keyboard_listener.get()
                 if self._keyboard is None:
                     # Forward
-                    if key == "w":
-                        self._camera.move_forward()
-                    elif key == "W":
+                    if key == "W":
                         self._camera.dash_forward()
+                    elif key == "w":
+                        self._camera.move_forward()
                     # Backward
-                    elif key == "s":
-                        self._camera.move_backward()
                     elif key == "S":
                         self._camera.dash_backward()
+                    elif key == "s":
+                        self._camera.move_backward()
                     # Leftward
-                    elif key == "a":
-                        self._camera.move_leftward()
                     elif key == "A":
                         self._camera.dash_leftward()
+                    elif key == "a":
+                        self._camera.move_leftward()
                     # Rightward
-                    elif key == "d":
-                        self._camera.move_rightward()
                     elif key == "D":
                         self._camera.dash_rightward()
+                    elif key == "d":
+                        self._camera.move_rightward()
                     # Upward
                     elif key == " ":
                         self._camera.move_upward()
