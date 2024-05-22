@@ -277,54 +277,66 @@ class Camera(object):
         return (self._vector_x, self._vector_y, self._vector_z)
 
     # Move methods
-    def move_forward(self) -> None:
+    def move_forward(self) -> bool:
         self._x += self._vector_x
         self._z += self._vector_z
+        return True
 
-    def move_backward(self) -> None:
+    def move_backward(self) -> bool:
         self._x -= self._vector_x
         self._z -= self._vector_z
+        return True
 
-    def move_leftward(self) -> None:
+    def move_leftward(self) -> bool:
         self._x -= self._vector_z
         self._z += self._vector_x
+        return True
 
-    def move_rightward(self) -> None:
+    def move_rightward(self) -> bool:
         self._x += self._vector_z
         self._z -= self._vector_x
+        return True
 
-    def move_upward(self) -> None:
+    def move_upward(self) -> bool:
         self._y += 1.0
+        return True
 
-    def move_downward(self) -> None:
+    def move_downward(self) -> bool:
         self._y -= 1.0
+        return True
 
-    def dash_forward(self) -> None:
+    def dash_forward(self) -> bool:
         self._x += 2.0 * self._vector_x
         self._z += 2.0 * self._vector_z
+        return True
 
-    def dash_backward(self) -> None:
+    def dash_backward(self) -> bool:
         self._x -= 2.0 * self._vector_x
         self._z -= 2.0 * self._vector_z
+        return True
 
-    def dash_leftward(self) -> None:
+    def dash_leftward(self) -> bool:
         self._x -= 2.0 * self._vector_z
         self._z += 2.0 * self._vector_x
+        return True
 
-    def dash_rightward(self) -> None:
+    def dash_rightward(self) -> bool:
         self._x += 2.0 * self._vector_z
         self._z -= 2.0 * self._vector_x
+        return True
 
-    def dash_up(self) -> None:
+    def dash_up(self) -> bool:
         self._y += 2.0
+        return True
 
-    def dash_down(self) -> None:
+    def dash_down(self) -> bool:
         self._y -= 2.0
+        return True
 
     # Rotate methods
     def rotate(
         self, *, yaw: float = 0.0, pitch: float = 0.0, roll: float = 0.0
-    ) -> None:
+    ) -> bool:
         self._yaw += yaw
         self._pitch += pitch
         self._roll += roll
@@ -333,12 +345,14 @@ class Camera(object):
         self._roll %= 360.0
         self._update_trigonometrics()
         self._update_vector()
+        return True
 
-    def reset(self) -> None:
+    def reset(self) -> bool:
         self._x, self._y, self._z = self._original_coordinate
         self._yaw, self._pitch, self._roll = self._original_rotation
         self._update_trigonometrics()
         self._update_vector()
+        return True
 
     # Trigonometrics and vector update methods
     def _update_trigonometrics(self) -> None:
@@ -547,6 +561,7 @@ class Fake3DSceneGame(Backend):
             screen_width = (screen_width // 2) * 2 or 1
             screen_height = screen_height - camera_info_length or 1
             half_width, half_height = screen_width / 2, screen_height / 2
+            update_triangles = False
 
             # Camera controlling
             # Third-party modules
@@ -554,37 +569,37 @@ class Fake3DSceneGame(Backend):
             if self._keyboard is not None:
                 # Forward
                 if self._keyboard.is_pressed("shift+w"):
-                    self._camera.dash_forward()
+                    update_triangles = self._camera.dash_forward()
                 elif self._keyboard.is_pressed("w"):
-                    self._camera.move_forward()
+                    update_triangles = self._camera.move_forward()
                 # Backward
                 if self._keyboard.is_pressed("shift+s"):
-                    self._camera.dash_backward()
+                    update_triangles = self._camera.dash_backward()
                 elif self._keyboard.is_pressed("s"):
-                    self._camera.move_backward()
+                    update_triangles = self._camera.move_backward()
                 # Leftward
                 if self._keyboard.is_pressed("shift+a"):
-                    self._camera.dash_leftward()
+                    update_triangles = self._camera.dash_leftward()
                 elif self._keyboard.is_pressed("a"):
-                    self._camera.move_leftward()
+                    update_triangles = self._camera.move_leftward()
                 # Rightward
                 if self._keyboard.is_pressed("shift+d"):
-                    self._camera.dash_rightward()
+                    update_triangles = self._camera.dash_rightward()
                 elif self._keyboard.is_pressed("d"):
-                    self._camera.move_rightward()
+                    update_triangles = self._camera.move_rightward()
                 # Upward
                 if self._keyboard.is_pressed("shift+space"):
-                    self._camera.dash_up()
+                    update_triangles = self._camera.dash_up()
                 elif self._keyboard.is_pressed("space"):
-                    self._camera.move_upward()
+                    update_triangles = self._camera.move_upward()
                 # Downward
                 if self._keyboard.is_pressed("ctrl+shift"):
-                    self._camera.dash_down()
+                    update_triangles = self._camera.dash_down()
                 elif self._keyboard.is_pressed("ctrl"):
-                    self._camera.move_downward()
+                    update_triangles = self._camera.move_downward()
                 # Reset
                 if self._keyboard.is_pressed("r"):
-                    self._camera.reset()
+                    update_triangles = self._camera.reset()
                 # Exit
                 if self._keyboard.is_pressed("escape"):
                     sys.exit(0)
@@ -592,9 +607,9 @@ class Fake3DSceneGame(Backend):
             if self._mouse is not None:
                 # Yaw/Pitch
                 mouse_x, mouse_y = self._mouse.get_position()
-                if (mouse_x, mouse_y) != (960, 540):
+                if mouse_x != 960 or mouse_y != 540:
                     self._mouse.move(960, 540)  # type: ignore
-                    self._camera.rotate(
+                    update_triangles = self._camera.rotate(
                         yaw=-(mouse_y - 540) / 18,
                         pitch=+(mouse_x - 960) / 18,
                     )
@@ -605,33 +620,33 @@ class Fake3DSceneGame(Backend):
                 if self._keyboard is None:
                     # Forward
                     if key == "W":
-                        self._camera.dash_forward()
+                        update_triangles = self._camera.dash_forward()
                     elif key == "w":
-                        self._camera.move_forward()
+                        update_triangles = self._camera.move_forward()
                     # Backward
                     elif key == "S":
-                        self._camera.dash_backward()
+                        update_triangles = self._camera.dash_backward()
                     elif key == "s":
-                        self._camera.move_backward()
+                        update_triangles = self._camera.move_backward()
                     # Leftward
                     elif key == "A":
-                        self._camera.dash_leftward()
+                        update_triangles = self._camera.dash_leftward()
                     elif key == "a":
-                        self._camera.move_leftward()
+                        update_triangles = self._camera.move_leftward()
                     # Rightward
                     elif key == "D":
-                        self._camera.dash_rightward()
+                        update_triangles = self._camera.dash_rightward()
                     elif key == "d":
-                        self._camera.move_rightward()
+                        update_triangles = self._camera.move_rightward()
                     # Upward
                     elif key == " ":
-                        self._camera.move_upward()
+                        update_triangles = self._camera.move_upward()
                     # Downward
                     elif key == "\r":
-                        self._camera.move_downward()
+                        update_triangles = self._camera.move_downward()
                     # Reset
                     elif key == "r":
-                        self._camera.reset()
+                        update_triangles = self._camera.reset()
                     # Exit
                     elif key == "\x1b":
                         self._keyboard_listener.stop()
@@ -653,6 +668,10 @@ class Fake3DSceneGame(Backend):
                         self._camera.rotate(yaw=0.0, pitch=0.0, roll=+1.0)
                     elif key == "q":
                         self._camera.rotate(yaw=0.0, pitch=0.0, roll=-1.0)
+
+            # Triangle update
+            if update_triangles:
+                self._update_triangles()
 
             # Frame generation
             # Camera view
