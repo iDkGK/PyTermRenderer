@@ -547,7 +547,9 @@ class Fake3DSceneGame(Backend):
             screen_width = (screen_width // 2) * 2 or 1
             screen_height = screen_height - camera_info_length or 1
             half_width, half_height = screen_width / 2, screen_height / 2
-            # Camera controlling with third-party modules
+
+            # Camera controlling
+            # Third-party modules
             # Position
             if self._keyboard is not None:
                 # Forward
@@ -596,9 +598,10 @@ class Fake3DSceneGame(Backend):
                         yaw=-(mouse_y - 540) / 18,
                         pitch=+(mouse_x - 960) / 18,
                     )
-            # Camera controlling with custom `KeyboardListener`
+            # Custom `KeyboardListener`
             if self._keyboard_listener is not None:
                 key = self._keyboard_listener.get()
+                # Position
                 if self._keyboard is None:
                     # Forward
                     if key == "W":
@@ -633,6 +636,7 @@ class Fake3DSceneGame(Backend):
                     elif key == "\x1b":
                         self._keyboard_listener.stop()
                         sys.exit(0)
+                # Rotation
                 if self._mouse is None:
                     # Yaw
                     if key == "8":
@@ -649,32 +653,27 @@ class Fake3DSceneGame(Backend):
                         self._camera.rotate(yaw=0.0, pitch=0.0, roll=+1.0)
                     elif key == "q":
                         self._camera.rotate(yaw=0.0, pitch=0.0, roll=-1.0)
-            # Update
-            self._update_triangles()
+
+            # Frame generation
+            # Camera view
             frame_buffer: FrameType = []
             for y in range(0, screen_height):
                 row_buffer: RowType = []
                 for x in range(0, screen_width):
-                    row_buffer.append(
-                        (
-                            255,
-                            255,
-                            255,
-                            255,
-                            ord(
-                                "█"
-                                if any(
-                                    ((x - half_width) / 2, y - half_height) in triangle
-                                    for triangle in self._triangles
-                                )
-                                else " "
-                            ),
-                        )
-                    )
+                    vertex_x, vertex_y = (x - half_width) / 2, y - half_height
+                    if any(
+                        (vertex_x, vertex_y) in triangle for triangle in self._triangles
+                    ):
+                        character = "█"
+                    else:
+                        character = " "
+                    row_buffer.append((255, 255, 255, 255, ord(character)))
                 frame_buffer.insert(0, row_buffer)
+            # Camera info
             for camera_info in self._camera.info:
                 row_buffer: RowType = []
                 for character in camera_info.ljust(screen_width)[:screen_width]:
                     row_buffer.append((255, 255, 255, 255, ord(character)))
                 frame_buffer.append(row_buffer)
+
             yield frame_buffer

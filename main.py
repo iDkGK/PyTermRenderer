@@ -178,7 +178,7 @@ if __name__ == "__main__":
     clear_terminal()
     # play_code_rain_animation(fps=15)
     # play_digital_clock_animation(fps=10)
-    play_fake_3d_scene_game(fps=60)
+    play_fake_3d_scene_game(fps=30)
     # display_static_png_image(fps=1)
     # play_dynamic_png_images_ascii(fps=15)
     # decode_png_images_in_parallel()
