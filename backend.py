@@ -547,7 +547,7 @@ class Fake3DSceneGame(Backend):
             screen_width = (screen_width // 2) * 2 or 1
             screen_height = screen_height - camera_info_length or 1
             half_width, half_height = screen_width / 2, screen_height / 2
-            # Camera controlling
+            # Camera controlling with third-party modules
             # Position
             if self._keyboard is not None:
                 # Forward
@@ -593,9 +593,10 @@ class Fake3DSceneGame(Backend):
                 if (mouse_x, mouse_y) != (960, 540):
                     self._mouse.move(960, 540)  # type: ignore
                     self._camera.rotate(
-                        yaw=-(mouse_y - 540) / 36,
-                        pitch=+(mouse_x - 960) / 36,
+                        yaw=-(mouse_y - 540) / 18,
+                        pitch=+(mouse_x - 960) / 18,
                     )
+            # Camera controlling with custom `KeyboardListener`
             if self._keyboard_listener is not None:
                 key = self._keyboard_listener.get()
                 if self._keyboard is None:
@@ -629,7 +630,7 @@ class Fake3DSceneGame(Backend):
                     elif key == "r":
                         self._camera.reset()
                     # Exit
-                    elif key in ("\x03", "\x1a", "\x1c"):
+                    elif key == "\x1b":
                         self._keyboard_listener.stop()
                         sys.exit(0)
                 if self._mouse is None:
