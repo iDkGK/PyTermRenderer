@@ -352,12 +352,12 @@ class Fake3DSceneGame(Backend):
         camera_fov = self._camera.fov
         camera_x, camera_y, camera_z = self._camera.coordinate
         (
-            camear_sin_yaw,
-            camear_cos_yaw,
-            camear_sin_pitch,
-            camear_cos_pitch,
-            camear_sin_roll,
-            camear_cos_roll,
+            camera_sin_yaw,
+            camera_cos_yaw,
+            camera_sin_pitch,
+            camera_cos_pitch,
+            camera_sin_roll,
+            camera_cos_roll,
         ) = self._camera.trigonometrics
         # Iteration over all triangles
         # Assuming that every triangle is ▲abc
@@ -399,60 +399,60 @@ class Fake3DSceneGame(Backend):
             # Rotation
             # X-axis rotation that affects Y/Z coordinates
             distance_camera_triangle_a_y, distance_camera_triangle_a_z = (
-                distance_camera_triangle_a_y * camear_cos_yaw
-                + distance_camera_triangle_a_z * camear_sin_yaw,
-                distance_camera_triangle_a_z * camear_cos_yaw
-                - distance_camera_triangle_a_y * camear_sin_yaw,
+                distance_camera_triangle_a_y * camera_cos_yaw
+                + distance_camera_triangle_a_z * camera_sin_yaw,
+                distance_camera_triangle_a_z * camera_cos_yaw
+                - distance_camera_triangle_a_y * camera_sin_yaw,
             )
             distance_camera_triangle_b_y, distance_camera_triangle_b_z = (
-                distance_camera_triangle_b_y * camear_cos_yaw
-                + distance_camera_triangle_b_z * camear_sin_yaw,
-                distance_camera_triangle_b_z * camear_cos_yaw
-                - distance_camera_triangle_b_y * camear_sin_yaw,
+                distance_camera_triangle_b_y * camera_cos_yaw
+                + distance_camera_triangle_b_z * camera_sin_yaw,
+                distance_camera_triangle_b_z * camera_cos_yaw
+                - distance_camera_triangle_b_y * camera_sin_yaw,
             )
             distance_camera_triangle_c_y, distance_camera_triangle_c_z = (
-                distance_camera_triangle_c_y * camear_cos_yaw
-                + distance_camera_triangle_c_z * camear_sin_yaw,
-                distance_camera_triangle_c_z * camear_cos_yaw
-                - distance_camera_triangle_c_y * camear_sin_yaw,
+                distance_camera_triangle_c_y * camera_cos_yaw
+                + distance_camera_triangle_c_z * camera_sin_yaw,
+                distance_camera_triangle_c_z * camera_cos_yaw
+                - distance_camera_triangle_c_y * camera_sin_yaw,
             )
             # Y-axis rotation that affects X/Z coordinates
             distance_camera_triangle_a_x, distance_camera_triangle_a_z = (
-                distance_camera_triangle_a_x * camear_cos_pitch
-                - distance_camera_triangle_a_z * camear_sin_pitch,
-                distance_camera_triangle_a_x * camear_sin_pitch
-                + distance_camera_triangle_a_z * camear_cos_pitch,
+                distance_camera_triangle_a_x * camera_cos_pitch
+                - distance_camera_triangle_a_z * camera_sin_pitch,
+                distance_camera_triangle_a_x * camera_sin_pitch
+                + distance_camera_triangle_a_z * camera_cos_pitch,
             )
             distance_camera_triangle_b_x, distance_camera_triangle_b_z = (
-                distance_camera_triangle_b_x * camear_cos_pitch
-                - distance_camera_triangle_b_z * camear_sin_pitch,
-                distance_camera_triangle_b_x * camear_sin_pitch
-                + distance_camera_triangle_b_z * camear_cos_pitch,
+                distance_camera_triangle_b_x * camera_cos_pitch
+                - distance_camera_triangle_b_z * camera_sin_pitch,
+                distance_camera_triangle_b_x * camera_sin_pitch
+                + distance_camera_triangle_b_z * camera_cos_pitch,
             )
             distance_camera_triangle_c_x, distance_camera_triangle_c_z = (
-                distance_camera_triangle_c_x * camear_cos_pitch
-                - distance_camera_triangle_c_z * camear_sin_pitch,
-                distance_camera_triangle_c_x * camear_sin_pitch
-                + distance_camera_triangle_c_z * camear_cos_pitch,
+                distance_camera_triangle_c_x * camera_cos_pitch
+                - distance_camera_triangle_c_z * camera_sin_pitch,
+                distance_camera_triangle_c_x * camera_sin_pitch
+                + distance_camera_triangle_c_z * camera_cos_pitch,
             )
             # Z-axis rotation that affects X/Y coordinates
             distance_camera_triangle_a_x, distance_camera_triangle_a_y = (
-                distance_camera_triangle_a_x * camear_cos_roll
-                - distance_camera_triangle_a_y * camear_sin_roll,
-                distance_camera_triangle_a_x * camear_sin_roll
-                + distance_camera_triangle_a_y * camear_cos_roll,
+                distance_camera_triangle_a_x * camera_cos_roll
+                - distance_camera_triangle_a_y * camera_sin_roll,
+                distance_camera_triangle_a_x * camera_sin_roll
+                + distance_camera_triangle_a_y * camera_cos_roll,
             )
             distance_camera_triangle_b_x, distance_camera_triangle_b_y = (
-                distance_camera_triangle_b_x * camear_cos_roll
-                - distance_camera_triangle_b_y * camear_sin_roll,
-                distance_camera_triangle_b_x * camear_sin_roll
-                + distance_camera_triangle_b_y * camear_cos_roll,
+                distance_camera_triangle_b_x * camera_cos_roll
+                - distance_camera_triangle_b_y * camera_sin_roll,
+                distance_camera_triangle_b_x * camera_sin_roll
+                + distance_camera_triangle_b_y * camera_cos_roll,
             )
             distance_camera_triangle_c_x, distance_camera_triangle_c_y = (
-                distance_camera_triangle_c_x * camear_cos_roll
-                - distance_camera_triangle_c_y * camear_sin_roll,
-                distance_camera_triangle_c_x * camear_sin_roll
-                + distance_camera_triangle_c_y * camear_cos_roll,
+                distance_camera_triangle_c_x * camera_cos_roll
+                - distance_camera_triangle_c_y * camera_sin_roll,
+                distance_camera_triangle_c_x * camera_sin_roll
+                + distance_camera_triangle_c_y * camera_cos_roll,
             )
             # Simple culling. TODO: advanced culling mechanism.
             if (
@@ -532,10 +532,10 @@ class Fake3DSceneGame(Backend):
                 self._camera.rotate(pitch=-1.0)
             elif key == "6":
                 self._camera.rotate(pitch=+1.0)
-            # elif key == "e":
-            #     self._camera.rotate(roll=+1.0)
-            # elif key == "q":
-            #     self._camera.rotate(roll=-1.0)
+            elif key == "e":
+                self._camera.rotate(roll=+1.0)
+            elif key == "q":
+                self._camera.rotate(roll=-1.0)
             # Reset
             if key == "5":
                 self._camera.reset()
