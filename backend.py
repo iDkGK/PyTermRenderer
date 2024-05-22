@@ -230,12 +230,23 @@ class Camera(object):
         fov: float,
         coordinate: tuple[float, float, float],
         rotation: tuple[float, float, float],
+        move_speed: float = 1.0,
+        dash_speed: float = 2.0,
+        deacceleration_rate: float = 0.5,
     ) -> None:
         self._fov = fov
         self._x, self._y, self._z = coordinate
         self._original_coordinate = coordinate
         self._yaw, self._pitch, self._roll = rotation
         self._original_rotation = rotation
+        self._acceleration_x = 0.0
+        self._acceleration_y = 0.0
+        self._acceleration_z = 0.0
+        self._move_speed = abs(move_speed)
+        self._dash_speed = abs(dash_speed)
+        self._move_acceleration = abs(move_speed / 2.0)
+        self._dash_acceleration = abs(dash_speed / 2.0)
+        self._deacceleration_rate = max(min(deacceleration_rate, 1.0), 0.0)
         self._update_trigonometrics()
         self._update_vector()
 
@@ -277,66 +288,114 @@ class Camera(object):
         return (self._vector_x, self._vector_y, self._vector_z)
 
     # Move methods
-    def move_forward(self) -> bool:
-        self._x += self._vector_x
-        self._z += self._vector_z
-        return True
+    def move_forward(self) -> None:
+        self._acceleration_x += self._move_acceleration * self._vector_x
+        self._acceleration_z += self._move_acceleration * self._vector_z
+        self._acceleration_x = max(
+            min(self._acceleration_x, self._move_speed), -self._move_speed
+        )
+        self._acceleration_z = max(
+            min(self._acceleration_z, self._move_speed), -self._move_speed
+        )
 
-    def move_backward(self) -> bool:
-        self._x -= self._vector_x
-        self._z -= self._vector_z
-        return True
+    def move_backward(self) -> None:
+        self._acceleration_x -= self._move_acceleration * self._vector_x
+        self._acceleration_z -= self._move_acceleration * self._vector_z
+        self._acceleration_x = max(
+            min(self._acceleration_x, self._move_speed), -self._move_speed
+        )
+        self._acceleration_z = max(
+            min(self._acceleration_z, self._move_speed), -self._move_speed
+        )
 
-    def move_leftward(self) -> bool:
-        self._x -= self._vector_z
-        self._z += self._vector_x
-        return True
+    def move_leftward(self) -> None:
+        self._acceleration_x -= self._move_acceleration * self._vector_z
+        self._acceleration_z += self._move_acceleration * self._vector_x
+        self._acceleration_x = max(
+            min(self._acceleration_x, self._move_speed), -self._move_speed
+        )
+        self._acceleration_z = max(
+            min(self._acceleration_z, self._move_speed), -self._move_speed
+        )
 
-    def move_rightward(self) -> bool:
-        self._x += self._vector_z
-        self._z -= self._vector_x
-        return True
+    def move_rightward(self) -> None:
+        self._acceleration_x += self._move_acceleration * self._vector_z
+        self._acceleration_z -= self._move_acceleration * self._vector_x
+        self._acceleration_x = max(
+            min(self._acceleration_x, self._move_speed), -self._move_speed
+        )
+        self._acceleration_z = max(
+            min(self._acceleration_z, self._move_speed), -self._move_speed
+        )
 
-    def move_upward(self) -> bool:
-        self._y += 1.0
-        return True
+    def move_upward(self) -> None:
+        self._acceleration_y += self._move_acceleration
+        self._acceleration_y = max(
+            min(self._acceleration_y, self._move_speed), -self._move_speed
+        )
 
-    def move_downward(self) -> bool:
-        self._y -= 1.0
-        return True
+    def move_downward(self) -> None:
+        self._acceleration_y -= self._move_acceleration
+        self._acceleration_y = max(
+            min(self._acceleration_y, self._move_speed), -self._move_speed
+        )
 
-    def dash_forward(self) -> bool:
-        self._x += 2.0 * self._vector_x
-        self._z += 2.0 * self._vector_z
-        return True
+    def dash_forward(self) -> None:
+        self._acceleration_x += self._dash_acceleration * self._vector_x
+        self._acceleration_z += self._dash_acceleration * self._vector_z
+        self._acceleration_x = max(
+            min(self._acceleration_x, self._dash_speed), -self._dash_speed
+        )
+        self._acceleration_z = max(
+            min(self._acceleration_z, self._dash_speed), -self._dash_speed
+        )
 
-    def dash_backward(self) -> bool:
-        self._x -= 2.0 * self._vector_x
-        self._z -= 2.0 * self._vector_z
-        return True
+    def dash_backward(self) -> None:
+        self._acceleration_x -= self._dash_acceleration * self._vector_x
+        self._acceleration_z -= self._dash_acceleration * self._vector_z
+        self._acceleration_x = max(
+            min(self._acceleration_x, self._dash_speed), -self._dash_speed
+        )
+        self._acceleration_z = max(
+            min(self._acceleration_z, self._dash_speed), -self._dash_speed
+        )
 
-    def dash_leftward(self) -> bool:
-        self._x -= 2.0 * self._vector_z
-        self._z += 2.0 * self._vector_x
-        return True
+    def dash_leftward(self) -> None:
+        self._acceleration_x -= self._dash_acceleration * self._vector_z
+        self._acceleration_z += self._dash_acceleration * self._vector_x
+        self._acceleration_x = max(
+            min(self._acceleration_x, self._dash_speed), -self._dash_speed
+        )
+        self._acceleration_z = max(
+            min(self._acceleration_z, self._dash_speed), -self._dash_speed
+        )
 
-    def dash_rightward(self) -> bool:
-        self._x += 2.0 * self._vector_z
-        self._z -= 2.0 * self._vector_x
-        return True
+    def dash_rightward(self) -> None:
+        self._acceleration_x += self._dash_acceleration * self._vector_z
+        self._acceleration_z -= self._dash_acceleration * self._vector_x
+        self._acceleration_x = max(
+            min(self._acceleration_x, self._dash_speed), -self._dash_speed
+        )
+        self._acceleration_z = max(
+            min(self._acceleration_z, self._dash_speed), -self._dash_speed
+        )
 
-    def dash_up(self) -> bool:
-        self._y += 2.0
-        return True
+    def dash_up(self) -> None:
+        self._acceleration_y += self._dash_acceleration
+        self._acceleration_y = max(
+            min(self._acceleration_y, self._dash_speed), -self._dash_speed
+        )
 
-    def dash_down(self) -> bool:
-        self._y -= 2.0
-        return True
+    def dash_down(self) -> None:
+        self._acceleration_y -= self._dash_acceleration
+        self._acceleration_y = max(
+            min(self._acceleration_y, self._dash_speed), -self._dash_speed
+        )
 
     # Rotate methods
     def rotate(
         self, *, yaw: float = 0.0, pitch: float = 0.0, roll: float = 0.0
-    ) -> bool:
+    ) -> None:
         self._yaw += yaw
         self._pitch += pitch
         self._roll += roll
@@ -345,16 +404,46 @@ class Camera(object):
         self._roll %= 360.0
         self._update_trigonometrics()
         self._update_vector()
-        return True
 
-    def reset(self) -> bool:
+    def reset(self) -> None:
         self._x, self._y, self._z = self._original_coordinate
         self._yaw, self._pitch, self._roll = self._original_rotation
+        self._acceleration_x = 0.0
+        self._acceleration_y = 0.0
+        self._acceleration_z = 0.0
         self._update_trigonometrics()
         self._update_vector()
-        return True
 
-    # Trigonometrics and vector update methods
+    # Update methods
+    def update(self) -> None:
+        self._x += self._acceleration_x
+        self._y += self._acceleration_y
+        self._z += self._acceleration_z
+        if self._acceleration_x > 0:
+            self._acceleration_x -= abs(
+                self._acceleration_x * self._deacceleration_rate
+            )
+        elif self._acceleration_x < 0:
+            self._acceleration_x += abs(
+                self._acceleration_x * self._deacceleration_rate
+            )
+        if self._acceleration_y > 0:
+            self._acceleration_y -= abs(
+                self._acceleration_y * self._deacceleration_rate
+            )
+        elif self._acceleration_y < 0:
+            self._acceleration_y += abs(
+                self._acceleration_y * self._deacceleration_rate
+            )
+        if self._acceleration_z > 0:
+            self._acceleration_z -= abs(
+                self._acceleration_z * self._deacceleration_rate
+            )
+        elif self._acceleration_z < 0:
+            self._acceleration_z += abs(
+                self._acceleration_z * self._deacceleration_rate
+            )
+
     def _update_trigonometrics(self) -> None:
         yaw_radians = math.radians(-self._yaw)
         pitch_radians = math.radians(self._pitch)
@@ -547,7 +636,7 @@ class Fake3DSceneGame(Backend):
 
     @property
     def frames(self) -> FramesType:
-        self._camera = Camera(15, (0.0, 0.0, -75.0), (0.0, 0.0, 0.0))
+        self._camera = Camera(15, (0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
         self._triangle_vertices = [
             ((-25.0, -25.0, -25.0), (-25.0, 25.0, -25.0), (25.0, -25.0, -25.0)),  # ◣
             ((25.0, 25.0, -25.0), (25.0, -25.0, -25.0), (-25.0, 25.0, -25.0)),  # ◥
@@ -561,7 +650,6 @@ class Fake3DSceneGame(Backend):
             screen_width = (screen_width // 2) * 2 or 1
             screen_height = screen_height - camera_info_length or 1
             half_width, half_height = screen_width / 2, screen_height / 2
-            update_triangles = False
 
             # Camera controlling
             # Third-party modules
@@ -569,37 +657,37 @@ class Fake3DSceneGame(Backend):
             if self._keyboard is not None:
                 # Forward
                 if self._keyboard.is_pressed("shift+w"):
-                    update_triangles = self._camera.dash_forward()
+                    self._camera.dash_forward()
                 elif self._keyboard.is_pressed("w"):
-                    update_triangles = self._camera.move_forward()
+                    self._camera.move_forward()
                 # Backward
                 if self._keyboard.is_pressed("shift+s"):
-                    update_triangles = self._camera.dash_backward()
+                    self._camera.dash_backward()
                 elif self._keyboard.is_pressed("s"):
-                    update_triangles = self._camera.move_backward()
+                    self._camera.move_backward()
                 # Leftward
                 if self._keyboard.is_pressed("shift+a"):
-                    update_triangles = self._camera.dash_leftward()
+                    self._camera.dash_leftward()
                 elif self._keyboard.is_pressed("a"):
-                    update_triangles = self._camera.move_leftward()
+                    self._camera.move_leftward()
                 # Rightward
                 if self._keyboard.is_pressed("shift+d"):
-                    update_triangles = self._camera.dash_rightward()
+                    self._camera.dash_rightward()
                 elif self._keyboard.is_pressed("d"):
-                    update_triangles = self._camera.move_rightward()
+                    self._camera.move_rightward()
                 # Upward
                 if self._keyboard.is_pressed("shift+space"):
-                    update_triangles = self._camera.dash_up()
+                    self._camera.dash_up()
                 elif self._keyboard.is_pressed("space"):
-                    update_triangles = self._camera.move_upward()
+                    self._camera.move_upward()
                 # Downward
                 if self._keyboard.is_pressed("ctrl+shift"):
-                    update_triangles = self._camera.dash_down()
+                    self._camera.dash_down()
                 elif self._keyboard.is_pressed("ctrl"):
-                    update_triangles = self._camera.move_downward()
+                    self._camera.move_downward()
                 # Reset
                 if self._keyboard.is_pressed("r"):
-                    update_triangles = self._camera.reset()
+                    self._camera.reset()
                 # Exit
                 if self._keyboard.is_pressed("escape"):
                     sys.exit(0)
@@ -609,7 +697,7 @@ class Fake3DSceneGame(Backend):
                 mouse_x, mouse_y = self._mouse.get_position()
                 if mouse_x != 960 or mouse_y != 540:
                     self._mouse.move(960, 540)  # type: ignore
-                    update_triangles = self._camera.rotate(
+                    self._camera.rotate(
                         yaw=-(mouse_y - 540) / 18,
                         pitch=+(mouse_x - 960) / 18,
                     )
@@ -620,33 +708,33 @@ class Fake3DSceneGame(Backend):
                 if self._keyboard is None:
                     # Forward
                     if key == "W":
-                        update_triangles = self._camera.dash_forward()
+                        self._camera.dash_forward()
                     elif key == "w":
-                        update_triangles = self._camera.move_forward()
+                        self._camera.move_forward()
                     # Backward
                     elif key == "S":
-                        update_triangles = self._camera.dash_backward()
+                        self._camera.dash_backward()
                     elif key == "s":
-                        update_triangles = self._camera.move_backward()
+                        self._camera.move_backward()
                     # Leftward
                     elif key == "A":
-                        update_triangles = self._camera.dash_leftward()
+                        self._camera.dash_leftward()
                     elif key == "a":
-                        update_triangles = self._camera.move_leftward()
+                        self._camera.move_leftward()
                     # Rightward
                     elif key == "D":
-                        update_triangles = self._camera.dash_rightward()
+                        self._camera.dash_rightward()
                     elif key == "d":
-                        update_triangles = self._camera.move_rightward()
+                        self._camera.move_rightward()
                     # Upward
                     elif key == " ":
-                        update_triangles = self._camera.move_upward()
+                        self._camera.move_upward()
                     # Downward
                     elif key == "\r":
-                        update_triangles = self._camera.move_downward()
+                        self._camera.move_downward()
                     # Reset
                     elif key == "r":
-                        update_triangles = self._camera.reset()
+                        self._camera.reset()
                     # Exit
                     elif key == "\x1b":
                         self._keyboard_listener.stop()
@@ -668,10 +756,8 @@ class Fake3DSceneGame(Backend):
                         self._camera.rotate(yaw=0.0, pitch=0.0, roll=+1.0)
                     elif key == "q":
                         self._camera.rotate(yaw=0.0, pitch=0.0, roll=-1.0)
-
-            # Triangle update
-            if update_triangles:
-                self._update_triangles()
+            self._camera.update()
+            self._update_triangles()
 
             # Frame generation
             # Camera view
