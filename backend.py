@@ -308,9 +308,9 @@ class Camera(object):
         self._yaw += yaw
         self._pitch += pitch
         self._roll += roll
-        # self._yaw = max(min(self._yaw, 90.0), -90.0)
-        # self._pitch %= 360.0
-        # self._roll %= 360.0
+        self._yaw = max(min(self._yaw, 90.0), -90.0)
+        self._pitch %= 360.0
+        self._roll %= 360.0
         self._update_trigonometrics()
         self._update_vector()
 
@@ -324,7 +324,7 @@ class Camera(object):
 class Fake3DSceneGame(Backend):
     def __init__(self) -> None:
         self._keyboard_listener = KeyboardListener()
-        self._camera = Camera(15, (0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
+        self._camera = Camera(15, (0.0, 0.0, -75.0), (0.0, 0.0, 0.0))
         self._triangle_vertices = [
             ((-25.0, -25.0, -25.0), (-25.0, 25.0, -25.0), (25.0, -25.0, -25.0)),  # ◣
             ((25.0, 25.0, -25.0), (25.0, -25.0, -25.0), (-25.0, 25.0, -25.0)),  # ◥
@@ -531,6 +531,7 @@ class Fake3DSceneGame(Backend):
             if key in ("\x03", "\x1a", "\x1c"):
                 self._keyboard_listener.stop()
                 sys.exit(0)
+            # Update
             if key:
                 self._update_triangles()
             frame_buffer: FrameType = []
