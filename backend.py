@@ -3,9 +3,9 @@ import os
 import random
 import string
 import sys
+import warnings
 from datetime import datetime
 
-from controller import KeyboardListener
 from decoder import PNGSequence
 from hintings import FrameType, FramesType, RowType, EffectModeType
 from utilities import Triangle
@@ -285,18 +285,18 @@ class Camera(object):
         self._x -= self._vector_x
         self._z -= self._vector_z
 
-    def move_left(self) -> None:
+    def move_leftward(self) -> None:
         self._x -= self._vector_z
         self._z += self._vector_x
 
-    def move_right(self) -> None:
+    def move_rightward(self) -> None:
         self._x += self._vector_z
         self._z -= self._vector_x
 
-    def move_up(self) -> None:
+    def move_upward(self) -> None:
         self._y += 1.0
 
-    def move_down(self) -> None:
+    def move_downward(self) -> None:
         self._y -= 1.0
 
     def dash_forward(self) -> None:
@@ -307,11 +307,11 @@ class Camera(object):
         self._x -= 2.0 * self._vector_x
         self._z -= 2.0 * self._vector_z
 
-    def dash_left(self) -> None:
+    def dash_leftward(self) -> None:
         self._x -= 2.0 * self._vector_z
         self._z += 2.0 * self._vector_x
 
-    def dash_right(self) -> None:
+    def dash_rightward(self) -> None:
         self._x += 2.0 * self._vector_z
         self._z -= 2.0 * self._vector_x
 
@@ -359,6 +359,32 @@ class Camera(object):
 
 
 class Fake3DSceneGame(Backend):
+    def __init__(self) -> None:
+        try:
+            import keyboard
+
+            self._keyboard = keyboard
+        except ImportError:
+            self._keyboard = None
+            warnings.warn(
+                "no third-party support for keyboard. Using custom KeyboardListener."
+            )
+        try:
+            import mouse  # type: ignore
+
+            self._mouse = mouse
+        except ImportError:
+            self._mouse = None
+            warnings.warn(
+                "no third-party support for mouse. Using custom KeyboardListener."
+            )
+        if self._keyboard is None or self._mouse is None:
+            from controller import KeyboardListener
+
+            self._keyboard_listener = KeyboardListener()
+        else:
+            self._keyboard_listener = None
+
     def _update_triangles(self):
         # Triangles
         self._triangles: list[Triangle] = []
@@ -507,7 +533,6 @@ class Fake3DSceneGame(Backend):
 
     @property
     def frames(self) -> FramesType:
-        self._keyboard_listener = KeyboardListener()
         self._camera = Camera(15, (0.0, 0.0, -75.0), (0.0, 0.0, 0.0))
         self._triangle_vertices = [
             ((-25.0, -25.0, -25.0), (-25.0, 25.0, -25.0), (25.0, -25.0, -25.0)),  # ◣
@@ -522,52 +547,109 @@ class Fake3DSceneGame(Backend):
             screen_width = (screen_width // 2) * 2 or 1
             screen_height = screen_height - camera_info_length or 1
             half_width, half_height = screen_width / 2, screen_height / 2
-            key = self._keyboard_listener.get()
             # Camera controlling
             # Position
-            if key == "w":
-                self._camera.move_forward()
-            elif key == "s":
-                self._camera.move_backward()
-            elif key == "a":
-                self._camera.move_left()
-            elif key == "d":
-                self._camera.move_right()
-            elif key == "W":
-                self._camera.dash_forward()
-            elif key == "S":
-                self._camera.dash_backward()
-            elif key == "A":
-                self._camera.dash_left()
-            elif key == "D":
-                self._camera.dash_right()
-            elif key == " ":
-                self._camera.move_up()
-            elif key == "\r":
-                self._camera.move_down()
+            if self._keyboard is not None:
+                # Forward
+                if self._keyboard.is_pressed("w"):
+                    self._camera.move_forward()
+                elif self._keyboard.is_pressed("shift+w"):
+                    self._camera.dash_forward()
+                # Backward
+                if self._keyboard.is_pressed("s"):
+                    self._camera.move_backward()
+                elif self._keyboard.is_pressed("shift+s"):
+                    self._camera.dash_backward()
+                # Leftward
+                if self._keyboard.is_pressed("a"):
+                    self._camera.move_leftward()
+                elif self._keyboard.is_pressed("shift+a"):
+                    self._camera.dash_leftward()
+                # Rightward
+                if self._keyboard.is_pressed("d"):
+                    self._camera.move_rightward()
+                elif self._keyboard.is_pressed("shift+d"):
+                    self._camera.dash_rightward()
+                # Upward
+                if self._keyboard.is_pressed("space"):
+                    self._camera.move_upward()
+                elif self._keyboard.is_pressed("shift+space"):
+                    self._camera.dash_up()
+                # Downward
+                if self._keyboard.is_pressed("ctrl"):
+                    self._camera.move_downward()
+                elif self._keyboard.is_pressed("ctrl+shift"):
+                    self._camera.dash_down()
+                # Reset
+                if self._keyboard.is_pressed("r"):
+                    self._camera.reset()
+                # Exit
+                if self._keyboard.is_pressed("escape"):
+                    sys.exit(0)
             # Rotation
-            if key == "8":
-                self._camera.rotate(yaw=+1.0, pitch=0.0, roll=0.0)
-            elif key == "2":
-                self._camera.rotate(yaw=-1.0, pitch=0.0, roll=0.0)
-            elif key == "4":
-                self._camera.rotate(yaw=0.0, pitch=-1.0, roll=0.0)
-            elif key == "6":
-                self._camera.rotate(yaw=0.0, pitch=+1.0, roll=0.0)
-            elif key == "e":
-                self._camera.rotate(yaw=0.0, pitch=0.0, roll=+1.0)
-            elif key == "q":
-                self._camera.rotate(yaw=0.0, pitch=0.0, roll=-1.0)
-            # Reset
-            if key == "r":
-                self._camera.reset()
-            # Exit
-            if key in ("\x03", "\x1a", "\x1c"):
-                self._keyboard_listener.stop()
-                sys.exit(0)
+            if self._mouse is not None:
+                # Yaw/Pitch
+                mouse_x, mouse_y = self._mouse.get_position()
+                if (mouse_x, mouse_y) != (960, 540):
+                    self._mouse.move(960, 540)  # type: ignore
+                    self._camera.rotate(
+                        yaw=-(mouse_y - 540) / 36,
+                        pitch=+(mouse_x - 960) / 36,
+                    )
+            if self._keyboard_listener is not None:
+                key = self._keyboard_listener.get()
+                if self._keyboard is None:
+                    # Forward
+                    if key == "w":
+                        self._camera.move_forward()
+                    elif key == "W":
+                        self._camera.dash_forward()
+                    # Backward
+                    elif key == "s":
+                        self._camera.move_backward()
+                    elif key == "S":
+                        self._camera.dash_backward()
+                    # Leftward
+                    elif key == "a":
+                        self._camera.move_leftward()
+                    elif key == "A":
+                        self._camera.dash_leftward()
+                    # Rightward
+                    elif key == "d":
+                        self._camera.move_rightward()
+                    elif key == "D":
+                        self._camera.dash_rightward()
+                    # Upward
+                    elif key == " ":
+                        self._camera.move_upward()
+                    # Downward
+                    elif key == "\r":
+                        self._camera.move_downward()
+                    # Reset
+                    elif key == "r":
+                        self._camera.reset()
+                    # Exit
+                    elif key in ("\x03", "\x1a", "\x1c"):
+                        self._keyboard_listener.stop()
+                        sys.exit(0)
+                if self._mouse is None:
+                    # Yaw
+                    if key == "8":
+                        self._camera.rotate(yaw=+1.0, pitch=0.0, roll=0.0)
+                    elif key == "2":
+                        self._camera.rotate(yaw=-1.0, pitch=0.0, roll=0.0)
+                    # Pitch
+                    elif key == "4":
+                        self._camera.rotate(yaw=0.0, pitch=-1.0, roll=0.0)
+                    elif key == "6":
+                        self._camera.rotate(yaw=0.0, pitch=+1.0, roll=0.0)
+                    # Roll
+                    elif key == "e":
+                        self._camera.rotate(yaw=0.0, pitch=0.0, roll=+1.0)
+                    elif key == "q":
+                        self._camera.rotate(yaw=0.0, pitch=0.0, roll=-1.0)
             # Update
-            if key:
-                self._update_triangles()
+            self._update_triangles()
             frame_buffer: FrameType = []
             for y in range(0, screen_height):
                 row_buffer: RowType = []
