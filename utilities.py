@@ -1,3 +1,4 @@
+import math
 from hintings import MatrixType
 
 
@@ -120,3 +121,343 @@ class Triangle(object):
         ):
             return False
         return True
+
+
+class Camera(object):
+    def __init__(
+        self,
+        *,
+        fov: float,
+        coordinate: tuple[float, float, float],
+        rotation: tuple[float, float, float],
+        move_speed: float = 1.0,
+        dash_speed: float = 2.0,
+    ) -> None:
+        self._fov = fov
+        self._x, self._y, self._z = coordinate
+        self._original_coordinate = coordinate
+        self._yaw, self._pitch, self._roll = rotation
+        self._original_rotation = rotation
+        self._move_speed = abs(move_speed)
+        self._dash_speed = abs(dash_speed)
+        self._update_trigonometrics()
+        self._update_vector()
+
+    # Properties
+    @property
+    def info(self) -> tuple[str, ...]:
+        return (
+            "Camera FOV: %f" % self.fov,
+            "Camera coordinate (X, Y, Z): (%f, %f, %f)" % self.coordinate,
+            "Camera rotation (Yaw, Pitch, Roll): (%f, %f, %f)" % self.rotation,
+            "Camera direction vector (X, Y, Z): (%f, %f, %f)" % self.vector,
+        )
+
+    @property
+    def fov(self) -> float:
+        return self._fov
+
+    @property
+    def coordinate(self) -> tuple[float, float, float]:
+        return (self._x, self._y, self._z)
+
+    @property
+    def rotation(self) -> tuple[float, float, float]:
+        return (self._yaw, self._pitch, self._roll)
+
+    @property
+    def trigonometrics(self) -> tuple[float, float, float, float, float, float]:
+        return (
+            self._sin_yaw,
+            self._cos_yaw,
+            self._sin_pitch,
+            self._cos_pitch,
+            self._sin_roll,
+            self._cos_roll,
+        )
+
+    @property
+    def vector(self) -> tuple[float, float, float]:
+        return (self._vector_x, self._vector_y, self._vector_z)
+
+    # Move methods
+    def move_forward(self) -> None:
+        self._x += self._move_speed * self._vector_x
+        self._z += self._move_speed * self._vector_z
+
+    def move_backward(self) -> None:
+        self._x -= self._move_speed * self._vector_x
+        self._z -= self._move_speed * self._vector_z
+
+    def move_leftward(self) -> None:
+        self._x -= self._move_speed * self._vector_z
+        self._z += self._move_speed * self._vector_x
+
+    def move_rightward(self) -> None:
+        self._x += self._move_speed * self._vector_z
+        self._z -= self._move_speed * self._vector_x
+
+    def move_upward(self) -> None:
+        self._y += self._move_speed
+
+    def move_downward(self) -> None:
+        self._y -= self._move_speed
+
+    def dash_forward(self) -> None:
+        self._x += self._dash_speed * self._vector_x
+        self._z += self._dash_speed * self._vector_z
+
+    def dash_backward(self) -> None:
+        self._x -= self._dash_speed * self._vector_x
+        self._z -= self._dash_speed * self._vector_z
+
+    def dash_leftward(self) -> None:
+        self._x -= self._dash_speed * self._vector_z
+        self._z += self._dash_speed * self._vector_x
+
+    def dash_rightward(self) -> None:
+        self._x += self._dash_speed * self._vector_z
+        self._z -= self._dash_speed * self._vector_x
+
+    def dash_upward(self) -> None:
+        self._y += self._dash_speed
+
+    def dash_downward(self) -> None:
+        self._y -= self._dash_speed
+
+    # Rotate methods
+    def rotate(
+        self, *, yaw: float = 0.0, pitch: float = 0.0, roll: float = 0.0
+    ) -> None:
+        self._yaw += yaw
+        self._pitch += pitch
+        self._roll += roll
+        self._yaw = max(min(self._yaw, 90.0), -90.0)
+        self._pitch %= 360.0
+        self._roll %= 360.0
+        self._update_trigonometrics()
+        self._update_vector()
+
+    def reset(self) -> None:
+        self._x, self._y, self._z = self._original_coordinate
+        self._yaw, self._pitch, self._roll = self._original_rotation
+        self._update_trigonometrics()
+        self._update_vector()
+
+    # Update methods
+    def update(self) -> None:
+        pass
+
+    def _update_trigonometrics(self) -> None:
+        yaw_radians = math.radians(-self._yaw)
+        pitch_radians = math.radians(self._pitch)
+        roll_radians = math.radians(self._roll)
+        self._sin_yaw = math.sin(yaw_radians)
+        self._cos_yaw = math.cos(yaw_radians)
+        self._sin_pitch = math.sin(pitch_radians)
+        self._cos_pitch = math.cos(pitch_radians)
+        self._sin_roll = math.sin(roll_radians)
+        self._cos_roll = math.cos(roll_radians)
+
+    def _update_vector(self) -> None:
+        self._vector_x = self._sin_pitch  # X component
+        self._vector_y = 0.0  # Y component
+        self._vector_z = self._cos_pitch  # Z component
+
+
+class SmoothCamera(Camera):
+    def __init__(
+        self,
+        *,
+        fov: float,
+        coordinate: tuple[float, float, float],
+        rotation: tuple[float, float, float],
+        move_speed: float = 1.0,
+        dash_speed: float = 2.0,
+        deacceleration_rate: float = 0.5,
+    ) -> None:
+        self._acceleration_x = 0.0
+        self._acceleration_y = 0.0
+        self._acceleration_z = 0.0
+        self._move_acceleration = abs(move_speed / 2.0)
+        self._dash_acceleration = abs(dash_speed / 2.0)
+        self._deacceleration_rate = max(min(deacceleration_rate, 1.0), 0.0)
+        super().__init__(
+            fov=fov,
+            coordinate=coordinate,
+            rotation=rotation,
+            move_speed=move_speed,
+            dash_speed=dash_speed,
+        )
+
+    # Move methods
+    def move_forward(self) -> None:
+        self._acceleration_x += self._move_acceleration * self._vector_x
+        self._acceleration_z += self._move_acceleration * self._vector_z
+        self._acceleration_x = max(
+            min(self._acceleration_x, self._move_speed), -self._move_speed
+        )
+        self._acceleration_z = max(
+            min(self._acceleration_z, self._move_speed), -self._move_speed
+        )
+
+    def move_backward(self) -> None:
+        self._acceleration_x -= self._move_acceleration * self._vector_x
+        self._acceleration_z -= self._move_acceleration * self._vector_z
+        self._acceleration_x = max(
+            min(self._acceleration_x, self._move_speed), -self._move_speed
+        )
+        self._acceleration_z = max(
+            min(self._acceleration_z, self._move_speed), -self._move_speed
+        )
+
+    def move_leftward(self) -> None:
+        self._acceleration_x -= self._move_acceleration * self._vector_z
+        self._acceleration_z += self._move_acceleration * self._vector_x
+        self._acceleration_x = max(
+            min(self._acceleration_x, self._move_speed), -self._move_speed
+        )
+        self._acceleration_z = max(
+            min(self._acceleration_z, self._move_speed), -self._move_speed
+        )
+
+    def move_rightward(self) -> None:
+        self._acceleration_x += self._move_acceleration * self._vector_z
+        self._acceleration_z -= self._move_acceleration * self._vector_x
+        self._acceleration_x = max(
+            min(self._acceleration_x, self._move_speed), -self._move_speed
+        )
+        self._acceleration_z = max(
+            min(self._acceleration_z, self._move_speed), -self._move_speed
+        )
+
+    def move_upward(self) -> None:
+        self._acceleration_y += self._move_acceleration
+        self._acceleration_y = max(
+            min(self._acceleration_y, self._move_speed), -self._move_speed
+        )
+
+    def move_downward(self) -> None:
+        self._acceleration_y -= self._move_acceleration
+        self._acceleration_y = max(
+            min(self._acceleration_y, self._move_speed), -self._move_speed
+        )
+
+    def dash_forward(self) -> None:
+        self._acceleration_x += self._dash_acceleration * self._vector_x
+        self._acceleration_z += self._dash_acceleration * self._vector_z
+        self._acceleration_x = max(
+            min(self._acceleration_x, self._dash_speed), -self._dash_speed
+        )
+        self._acceleration_z = max(
+            min(self._acceleration_z, self._dash_speed), -self._dash_speed
+        )
+
+    def dash_backward(self) -> None:
+        self._acceleration_x -= self._dash_acceleration * self._vector_x
+        self._acceleration_z -= self._dash_acceleration * self._vector_z
+        self._acceleration_x = max(
+            min(self._acceleration_x, self._dash_speed), -self._dash_speed
+        )
+        self._acceleration_z = max(
+            min(self._acceleration_z, self._dash_speed), -self._dash_speed
+        )
+
+    def dash_leftward(self) -> None:
+        self._acceleration_x -= self._dash_acceleration * self._vector_z
+        self._acceleration_z += self._dash_acceleration * self._vector_x
+        self._acceleration_x = max(
+            min(self._acceleration_x, self._dash_speed), -self._dash_speed
+        )
+        self._acceleration_z = max(
+            min(self._acceleration_z, self._dash_speed), -self._dash_speed
+        )
+
+    def dash_rightward(self) -> None:
+        self._acceleration_x += self._dash_acceleration * self._vector_z
+        self._acceleration_z -= self._dash_acceleration * self._vector_x
+        self._acceleration_x = max(
+            min(self._acceleration_x, self._dash_speed), -self._dash_speed
+        )
+        self._acceleration_z = max(
+            min(self._acceleration_z, self._dash_speed), -self._dash_speed
+        )
+
+    def dash_upward(self) -> None:
+        self._acceleration_y += self._dash_acceleration
+        self._acceleration_y = max(
+            min(self._acceleration_y, self._dash_speed), -self._dash_speed
+        )
+
+    def dash_downward(self) -> None:
+        self._acceleration_y -= self._dash_acceleration
+        self._acceleration_y = max(
+            min(self._acceleration_y, self._dash_speed), -self._dash_speed
+        )
+
+    # Update methods
+    def update(self) -> None:
+        self._x += self._acceleration_x
+        self._y += self._acceleration_y
+        self._z += self._acceleration_z
+        self._acceleration_x -= self._acceleration_x * self._deacceleration_rate
+        self._acceleration_y -= self._acceleration_y * self._deacceleration_rate
+        self._acceleration_z -= self._acceleration_z * self._deacceleration_rate
+
+    def reset(self) -> None:
+        self._acceleration_x = 0.0
+        self._acceleration_y = 0.0
+        self._acceleration_z = 0.0
+        super().reset()
+
+
+class GravitySmoothCamera(SmoothCamera):
+    def __init__(
+        self,
+        *,
+        fov: float,
+        coordinate: tuple[float, float, float],
+        rotation: tuple[float, float, float],
+        gravity: float = 1.0,
+        jump_height: float = 5.0,
+        move_speed: float = 1.0,
+        dash_speed: float = 2.0,
+        deacceleration_rate: float = 0.5,
+    ) -> None:
+        self._gravity = abs(gravity)
+        self._jump_height = abs(jump_height)
+        super().__init__(
+            fov=fov,
+            coordinate=coordinate,
+            rotation=rotation,
+            move_speed=move_speed,
+            dash_speed=dash_speed,
+            deacceleration_rate=deacceleration_rate,
+        )
+
+    def move_upward(self) -> None:
+        if self._y <= 0.0:
+            self._acceleration_y = self._jump_height
+
+    def move_downward(self) -> None:
+        pass
+
+    def dash_upward(self) -> None:
+        if self._y <= 0.0:
+            self._acceleration_y = self._jump_height
+
+    def dash_downward(self) -> None:
+        pass
+
+    def update(self) -> None:
+        self._x += self._acceleration_x
+        self._z += self._acceleration_z
+        self._acceleration_x -= self._acceleration_x * self._deacceleration_rate
+        self._acceleration_z -= self._acceleration_z * self._deacceleration_rate
+
+        self._y += self._acceleration_y
+        self._y = max(self._y, 0.0)
+        if self._y > 0.0:
+            self._acceleration_y -= self._gravity * self._deacceleration_rate
+        else:
+            self._y = 0.0

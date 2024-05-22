@@ -1,4 +1,3 @@
-import math
 import os
 import random
 import string
@@ -8,7 +7,7 @@ from datetime import datetime
 
 from decoder import PNGSequence
 from hintings import FrameType, FramesType, RowType, EffectModeType
-from utilities import Triangle
+from utilities import Triangle, GravitySmoothCamera
 
 ASCII_CHARACTERS = "".join((string.digits, string.ascii_letters, string.punctuation))
 BINARY_CHARACTERS = "01" * 32
@@ -224,243 +223,6 @@ class DigitalTimeUnit(Backend):
             yield frame_buffer
 
 
-class Camera(object):
-    def __init__(
-        self,
-        fov: float,
-        coordinate: tuple[float, float, float],
-        rotation: tuple[float, float, float],
-        move_speed: float = 1.0,
-        dash_speed: float = 2.0,
-        deacceleration_rate: float = 0.5,
-    ) -> None:
-        self._fov = fov
-        self._x, self._y, self._z = coordinate
-        self._original_coordinate = coordinate
-        self._yaw, self._pitch, self._roll = rotation
-        self._original_rotation = rotation
-        self._acceleration_x = 0.0
-        self._acceleration_y = 0.0
-        self._acceleration_z = 0.0
-        self._move_speed = abs(move_speed)
-        self._dash_speed = abs(dash_speed)
-        self._move_acceleration = abs(move_speed / 2.0)
-        self._dash_acceleration = abs(dash_speed / 2.0)
-        self._deacceleration_rate = max(min(deacceleration_rate, 1.0), 0.0)
-        self._update_trigonometrics()
-        self._update_vector()
-
-    # Properties
-    @property
-    def info(self) -> tuple[str, ...]:
-        return (
-            "Camera FOV: %f" % self.fov,
-            "Camera coordinate (X, Y, Z): (%f, %f, %f)" % self.coordinate,
-            "Camera rotation (Yaw, Pitch, Roll): (%f, %f, %f)" % self.rotation,
-            "Camera direction vector (X, Y, Z): (%f, %f, %f)" % self.vector,
-        )
-
-    @property
-    def fov(self) -> float:
-        return self._fov
-
-    @property
-    def coordinate(self) -> tuple[float, float, float]:
-        return (self._x, self._y, self._z)
-
-    @property
-    def rotation(self) -> tuple[float, float, float]:
-        return (self._yaw, self._pitch, self._roll)
-
-    @property
-    def trigonometrics(self) -> tuple[float, float, float, float, float, float]:
-        return (
-            self._sin_yaw,
-            self._cos_yaw,
-            self._sin_pitch,
-            self._cos_pitch,
-            self._sin_roll,
-            self._cos_roll,
-        )
-
-    @property
-    def vector(self) -> tuple[float, float, float]:
-        return (self._vector_x, self._vector_y, self._vector_z)
-
-    # Move methods
-    def move_forward(self) -> None:
-        self._acceleration_x += self._move_acceleration * self._vector_x
-        self._acceleration_z += self._move_acceleration * self._vector_z
-        self._acceleration_x = max(
-            min(self._acceleration_x, self._move_speed), -self._move_speed
-        )
-        self._acceleration_z = max(
-            min(self._acceleration_z, self._move_speed), -self._move_speed
-        )
-
-    def move_backward(self) -> None:
-        self._acceleration_x -= self._move_acceleration * self._vector_x
-        self._acceleration_z -= self._move_acceleration * self._vector_z
-        self._acceleration_x = max(
-            min(self._acceleration_x, self._move_speed), -self._move_speed
-        )
-        self._acceleration_z = max(
-            min(self._acceleration_z, self._move_speed), -self._move_speed
-        )
-
-    def move_leftward(self) -> None:
-        self._acceleration_x -= self._move_acceleration * self._vector_z
-        self._acceleration_z += self._move_acceleration * self._vector_x
-        self._acceleration_x = max(
-            min(self._acceleration_x, self._move_speed), -self._move_speed
-        )
-        self._acceleration_z = max(
-            min(self._acceleration_z, self._move_speed), -self._move_speed
-        )
-
-    def move_rightward(self) -> None:
-        self._acceleration_x += self._move_acceleration * self._vector_z
-        self._acceleration_z -= self._move_acceleration * self._vector_x
-        self._acceleration_x = max(
-            min(self._acceleration_x, self._move_speed), -self._move_speed
-        )
-        self._acceleration_z = max(
-            min(self._acceleration_z, self._move_speed), -self._move_speed
-        )
-
-    def move_upward(self) -> None:
-        self._acceleration_y += self._move_acceleration
-        self._acceleration_y = max(
-            min(self._acceleration_y, self._move_speed), -self._move_speed
-        )
-
-    def move_downward(self) -> None:
-        self._acceleration_y -= self._move_acceleration
-        self._acceleration_y = max(
-            min(self._acceleration_y, self._move_speed), -self._move_speed
-        )
-
-    def dash_forward(self) -> None:
-        self._acceleration_x += self._dash_acceleration * self._vector_x
-        self._acceleration_z += self._dash_acceleration * self._vector_z
-        self._acceleration_x = max(
-            min(self._acceleration_x, self._dash_speed), -self._dash_speed
-        )
-        self._acceleration_z = max(
-            min(self._acceleration_z, self._dash_speed), -self._dash_speed
-        )
-
-    def dash_backward(self) -> None:
-        self._acceleration_x -= self._dash_acceleration * self._vector_x
-        self._acceleration_z -= self._dash_acceleration * self._vector_z
-        self._acceleration_x = max(
-            min(self._acceleration_x, self._dash_speed), -self._dash_speed
-        )
-        self._acceleration_z = max(
-            min(self._acceleration_z, self._dash_speed), -self._dash_speed
-        )
-
-    def dash_leftward(self) -> None:
-        self._acceleration_x -= self._dash_acceleration * self._vector_z
-        self._acceleration_z += self._dash_acceleration * self._vector_x
-        self._acceleration_x = max(
-            min(self._acceleration_x, self._dash_speed), -self._dash_speed
-        )
-        self._acceleration_z = max(
-            min(self._acceleration_z, self._dash_speed), -self._dash_speed
-        )
-
-    def dash_rightward(self) -> None:
-        self._acceleration_x += self._dash_acceleration * self._vector_z
-        self._acceleration_z -= self._dash_acceleration * self._vector_x
-        self._acceleration_x = max(
-            min(self._acceleration_x, self._dash_speed), -self._dash_speed
-        )
-        self._acceleration_z = max(
-            min(self._acceleration_z, self._dash_speed), -self._dash_speed
-        )
-
-    def dash_up(self) -> None:
-        self._acceleration_y += self._dash_acceleration
-        self._acceleration_y = max(
-            min(self._acceleration_y, self._dash_speed), -self._dash_speed
-        )
-
-    def dash_down(self) -> None:
-        self._acceleration_y -= self._dash_acceleration
-        self._acceleration_y = max(
-            min(self._acceleration_y, self._dash_speed), -self._dash_speed
-        )
-
-    # Rotate methods
-    def rotate(
-        self, *, yaw: float = 0.0, pitch: float = 0.0, roll: float = 0.0
-    ) -> None:
-        self._yaw += yaw
-        self._pitch += pitch
-        self._roll += roll
-        self._yaw = max(min(self._yaw, 90.0), -90.0)
-        self._pitch %= 360.0
-        self._roll %= 360.0
-        self._update_trigonometrics()
-        self._update_vector()
-
-    def reset(self) -> None:
-        self._x, self._y, self._z = self._original_coordinate
-        self._yaw, self._pitch, self._roll = self._original_rotation
-        self._acceleration_x = 0.0
-        self._acceleration_y = 0.0
-        self._acceleration_z = 0.0
-        self._update_trigonometrics()
-        self._update_vector()
-
-    # Update methods
-    def update(self) -> None:
-        self._x += self._acceleration_x
-        self._y += self._acceleration_y
-        self._z += self._acceleration_z
-        if self._acceleration_x > 0:
-            self._acceleration_x -= abs(
-                self._acceleration_x * self._deacceleration_rate
-            )
-        elif self._acceleration_x < 0:
-            self._acceleration_x += abs(
-                self._acceleration_x * self._deacceleration_rate
-            )
-        if self._acceleration_y > 0:
-            self._acceleration_y -= abs(
-                self._acceleration_y * self._deacceleration_rate
-            )
-        elif self._acceleration_y < 0:
-            self._acceleration_y += abs(
-                self._acceleration_y * self._deacceleration_rate
-            )
-        if self._acceleration_z > 0:
-            self._acceleration_z -= abs(
-                self._acceleration_z * self._deacceleration_rate
-            )
-        elif self._acceleration_z < 0:
-            self._acceleration_z += abs(
-                self._acceleration_z * self._deacceleration_rate
-            )
-
-    def _update_trigonometrics(self) -> None:
-        yaw_radians = math.radians(-self._yaw)
-        pitch_radians = math.radians(self._pitch)
-        roll_radians = math.radians(self._roll)
-        self._sin_yaw = math.sin(yaw_radians)
-        self._cos_yaw = math.cos(yaw_radians)
-        self._sin_pitch = math.sin(pitch_radians)
-        self._cos_pitch = math.cos(pitch_radians)
-        self._sin_roll = math.sin(roll_radians)
-        self._cos_roll = math.cos(roll_radians)
-
-    def _update_vector(self) -> None:
-        self._vector_x = self._sin_pitch  # X component
-        self._vector_y = 0.0  # Y component
-        self._vector_z = self._cos_pitch  # Z component
-
-
 class Fake3DSceneGame(Backend):
     def __init__(self) -> None:
         try:
@@ -487,6 +249,157 @@ class Fake3DSceneGame(Backend):
             self._keyboard_listener = KeyboardListener()
         else:
             self._keyboard_listener = None
+
+    @property
+    def frames(self) -> FramesType:
+        self._camera = GravitySmoothCamera(
+            fov=15, coordinate=(0.0, 0.0, 0.0), rotation=(0.0, 0.0, 0.0)
+        )
+        self._triangle_vertices = [
+            ((-25.0, -25.0, -25.0), (-25.0, 25.0, -25.0), (25.0, -25.0, -25.0)),  # ◣
+            ((25.0, 25.0, -25.0), (25.0, -25.0, -25.0), (-25.0, 25.0, -25.0)),  # ◥
+            ((-25.0, -25.0, 25.0), (-25.0, 25.0, 25.0), (25.0, -25.0, 25.0)),  # ◺
+            ((25.0, 25.0, 25.0), (25.0, -25.0, 25.0), (-25.0, 25.0, 25.0)),  # ◹
+        ]
+        camera_info_length = len(self._camera.info)
+        self._update_triangles()
+        while True:
+            screen_width, screen_height = os.get_terminal_size()
+            screen_width = (screen_width // 2) * 2 or 1
+            screen_height = screen_height - camera_info_length or 1
+            half_width, half_height = screen_width / 2, screen_height / 2
+
+            # Camera controlling
+            # Third-party modules
+            # Position
+            if self._keyboard is not None:
+                # Forward
+                if self._keyboard.is_pressed("shift+w"):
+                    self._camera.dash_forward()
+                elif self._keyboard.is_pressed("w"):
+                    self._camera.move_forward()
+                # Backward
+                if self._keyboard.is_pressed("shift+s"):
+                    self._camera.dash_backward()
+                elif self._keyboard.is_pressed("s"):
+                    self._camera.move_backward()
+                # Leftward
+                if self._keyboard.is_pressed("shift+a"):
+                    self._camera.dash_leftward()
+                elif self._keyboard.is_pressed("a"):
+                    self._camera.move_leftward()
+                # Rightward
+                if self._keyboard.is_pressed("shift+d"):
+                    self._camera.dash_rightward()
+                elif self._keyboard.is_pressed("d"):
+                    self._camera.move_rightward()
+                # Upward
+                if self._keyboard.is_pressed("shift+space"):
+                    self._camera.dash_upward()
+                elif self._keyboard.is_pressed("space"):
+                    self._camera.move_upward()
+                # Downward
+                if self._keyboard.is_pressed("ctrl+shift"):
+                    self._camera.dash_downward()
+                elif self._keyboard.is_pressed("ctrl"):
+                    self._camera.move_downward()
+                # Reset
+                if self._keyboard.is_pressed("r"):
+                    self._camera.reset()
+                # Exit
+                if self._keyboard.is_pressed("escape"):
+                    sys.exit(0)
+            # Rotation
+            if self._mouse is not None:
+                # Yaw/Pitch
+                mouse_x, mouse_y = self._mouse.get_position()
+                if mouse_x != 960 or mouse_y != 540:
+                    self._mouse.move(960, 540)  # type: ignore
+                    self._camera.rotate(
+                        yaw=-(mouse_y - 540) / 18,
+                        pitch=+(mouse_x - 960) / 18,
+                    )
+            # Custom `KeyboardListener`
+            if self._keyboard_listener is not None:
+                key = self._keyboard_listener.get()
+                # Position
+                if self._keyboard is None:
+                    # Forward
+                    if key == "W":
+                        self._camera.dash_forward()
+                    elif key == "w":
+                        self._camera.move_forward()
+                    # Backward
+                    elif key == "S":
+                        self._camera.dash_backward()
+                    elif key == "s":
+                        self._camera.move_backward()
+                    # Leftward
+                    elif key == "A":
+                        self._camera.dash_leftward()
+                    elif key == "a":
+                        self._camera.move_leftward()
+                    # Rightward
+                    elif key == "D":
+                        self._camera.dash_rightward()
+                    elif key == "d":
+                        self._camera.move_rightward()
+                    # Upward
+                    elif key == " ":
+                        self._camera.move_upward()
+                    # Downward
+                    elif key == "\r":
+                        self._camera.move_downward()
+                    # Reset
+                    elif key == "r":
+                        self._camera.reset()
+                    # Exit
+                    elif key == "\x1b":
+                        self._keyboard_listener.stop()
+                        sys.exit(0)
+                # Rotation
+                if self._mouse is None:
+                    # Yaw
+                    if key == "8":
+                        self._camera.rotate(yaw=+1.0, pitch=0.0, roll=0.0)
+                    elif key == "2":
+                        self._camera.rotate(yaw=-1.0, pitch=0.0, roll=0.0)
+                    # Pitch
+                    elif key == "4":
+                        self._camera.rotate(yaw=0.0, pitch=-1.0, roll=0.0)
+                    elif key == "6":
+                        self._camera.rotate(yaw=0.0, pitch=+1.0, roll=0.0)
+                    # Roll
+                    elif key == "e":
+                        self._camera.rotate(yaw=0.0, pitch=0.0, roll=+1.0)
+                    elif key == "q":
+                        self._camera.rotate(yaw=0.0, pitch=0.0, roll=-1.0)
+            self._camera.update()
+            self._update_triangles()
+
+            # Frame generation
+            # Camera view
+            frame_buffer: FrameType = []
+            for y in range(0, screen_height):
+                row_buffer: RowType = []
+                for x in range(0, screen_width):
+                    vertex_x, vertex_y = (x - half_width) / 2, y - half_height
+                    if any(
+                        (vertex_x, vertex_y) in triangle for triangle in self._triangles
+                    ):
+                        character = "█"
+                    else:
+                        character = " "
+                    row_buffer.append((255, 255, 255, 255, ord(character)))
+                frame_buffer.insert(0, row_buffer)
+            # Camera info
+            for camera_info in self._camera.info:
+                row_buffer: RowType = []
+                for character in camera_info.ljust(screen_width)[:screen_width]:
+                    row_buffer.append((255, 255, 255, 255, ord(character)))
+                frame_buffer.append(row_buffer)
+
+            yield frame_buffer
 
     def _update_triangles(self):
         # Triangles
@@ -633,152 +546,3 @@ class Fake3DSceneGame(Backend):
                         ),
                     )
                 )
-
-    @property
-    def frames(self) -> FramesType:
-        self._camera = Camera(15, (0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
-        self._triangle_vertices = [
-            ((-25.0, -25.0, -25.0), (-25.0, 25.0, -25.0), (25.0, -25.0, -25.0)),  # ◣
-            ((25.0, 25.0, -25.0), (25.0, -25.0, -25.0), (-25.0, 25.0, -25.0)),  # ◥
-            ((-25.0, -25.0, 25.0), (-25.0, 25.0, 25.0), (25.0, -25.0, 25.0)),  # ◺
-            ((25.0, 25.0, 25.0), (25.0, -25.0, 25.0), (-25.0, 25.0, 25.0)),  # ◹
-        ]
-        camera_info_length = len(self._camera.info)
-        self._update_triangles()
-        while True:
-            screen_width, screen_height = os.get_terminal_size()
-            screen_width = (screen_width // 2) * 2 or 1
-            screen_height = screen_height - camera_info_length or 1
-            half_width, half_height = screen_width / 2, screen_height / 2
-
-            # Camera controlling
-            # Third-party modules
-            # Position
-            if self._keyboard is not None:
-                # Forward
-                if self._keyboard.is_pressed("shift+w"):
-                    self._camera.dash_forward()
-                elif self._keyboard.is_pressed("w"):
-                    self._camera.move_forward()
-                # Backward
-                if self._keyboard.is_pressed("shift+s"):
-                    self._camera.dash_backward()
-                elif self._keyboard.is_pressed("s"):
-                    self._camera.move_backward()
-                # Leftward
-                if self._keyboard.is_pressed("shift+a"):
-                    self._camera.dash_leftward()
-                elif self._keyboard.is_pressed("a"):
-                    self._camera.move_leftward()
-                # Rightward
-                if self._keyboard.is_pressed("shift+d"):
-                    self._camera.dash_rightward()
-                elif self._keyboard.is_pressed("d"):
-                    self._camera.move_rightward()
-                # Upward
-                if self._keyboard.is_pressed("shift+space"):
-                    self._camera.dash_up()
-                elif self._keyboard.is_pressed("space"):
-                    self._camera.move_upward()
-                # Downward
-                if self._keyboard.is_pressed("ctrl+shift"):
-                    self._camera.dash_down()
-                elif self._keyboard.is_pressed("ctrl"):
-                    self._camera.move_downward()
-                # Reset
-                if self._keyboard.is_pressed("r"):
-                    self._camera.reset()
-                # Exit
-                if self._keyboard.is_pressed("escape"):
-                    sys.exit(0)
-            # Rotation
-            if self._mouse is not None:
-                # Yaw/Pitch
-                mouse_x, mouse_y = self._mouse.get_position()
-                if mouse_x != 960 or mouse_y != 540:
-                    self._mouse.move(960, 540)  # type: ignore
-                    self._camera.rotate(
-                        yaw=-(mouse_y - 540) / 18,
-                        pitch=+(mouse_x - 960) / 18,
-                    )
-            # Custom `KeyboardListener`
-            if self._keyboard_listener is not None:
-                key = self._keyboard_listener.get()
-                # Position
-                if self._keyboard is None:
-                    # Forward
-                    if key == "W":
-                        self._camera.dash_forward()
-                    elif key == "w":
-                        self._camera.move_forward()
-                    # Backward
-                    elif key == "S":
-                        self._camera.dash_backward()
-                    elif key == "s":
-                        self._camera.move_backward()
-                    # Leftward
-                    elif key == "A":
-                        self._camera.dash_leftward()
-                    elif key == "a":
-                        self._camera.move_leftward()
-                    # Rightward
-                    elif key == "D":
-                        self._camera.dash_rightward()
-                    elif key == "d":
-                        self._camera.move_rightward()
-                    # Upward
-                    elif key == " ":
-                        self._camera.move_upward()
-                    # Downward
-                    elif key == "\r":
-                        self._camera.move_downward()
-                    # Reset
-                    elif key == "r":
-                        self._camera.reset()
-                    # Exit
-                    elif key == "\x1b":
-                        self._keyboard_listener.stop()
-                        sys.exit(0)
-                # Rotation
-                if self._mouse is None:
-                    # Yaw
-                    if key == "8":
-                        self._camera.rotate(yaw=+1.0, pitch=0.0, roll=0.0)
-                    elif key == "2":
-                        self._camera.rotate(yaw=-1.0, pitch=0.0, roll=0.0)
-                    # Pitch
-                    elif key == "4":
-                        self._camera.rotate(yaw=0.0, pitch=-1.0, roll=0.0)
-                    elif key == "6":
-                        self._camera.rotate(yaw=0.0, pitch=+1.0, roll=0.0)
-                    # Roll
-                    elif key == "e":
-                        self._camera.rotate(yaw=0.0, pitch=0.0, roll=+1.0)
-                    elif key == "q":
-                        self._camera.rotate(yaw=0.0, pitch=0.0, roll=-1.0)
-            self._camera.update()
-            self._update_triangles()
-
-            # Frame generation
-            # Camera view
-            frame_buffer: FrameType = []
-            for y in range(0, screen_height):
-                row_buffer: RowType = []
-                for x in range(0, screen_width):
-                    vertex_x, vertex_y = (x - half_width) / 2, y - half_height
-                    if any(
-                        (vertex_x, vertex_y) in triangle for triangle in self._triangles
-                    ):
-                        character = "█"
-                    else:
-                        character = " "
-                    row_buffer.append((255, 255, 255, 255, ord(character)))
-                frame_buffer.insert(0, row_buffer)
-            # Camera info
-            for camera_info in self._camera.info:
-                row_buffer: RowType = []
-                for character in camera_info.ljust(screen_width)[:screen_width]:
-                    row_buffer.append((255, 255, 255, 255, ord(character)))
-                frame_buffer.append(row_buffer)
-
-            yield frame_buffer
