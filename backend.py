@@ -525,7 +525,7 @@ class Fake3DSceneGame(Backend):
             elif key == "q":
                 self._camera.rotate(yaw=0.0, pitch=0.0, roll=-1.0)
             # Reset
-            if key == "5":
+            if key == "r":
                 self._camera.reset()
             # Exit
             if key in ("\x03", "\x1a", "\x1c"):

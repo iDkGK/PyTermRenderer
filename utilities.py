@@ -1,4 +1,4 @@
-from hintings import MatrixType, MatrixRowType
+from hintings import MatrixType
 
 
 def matrix_transpose(matrix: MatrixType) -> MatrixType:
@@ -9,7 +9,9 @@ def matrix_add(*matrices: MatrixType) -> MatrixType:
     matrices_iterator = iter(matrices)
     first_matrix = next(matrices_iterator)
     # deep copy to avoid modification of first matrix
-    result_matrix = [first_matrix_row[:] for first_matrix_row in first_matrix]
+    result_matrix: MatrixType = [
+        first_matrix_row[:] for first_matrix_row in first_matrix
+    ]
     # continuously addition
     for other_matrix in matrices_iterator:
         for row_index, (result_matrix_row, other_matrix_row) in enumerate(
@@ -26,7 +28,9 @@ def matrix_subtract(*matrices: MatrixType) -> MatrixType:
     matrices_iterator = iter(matrices)
     first_matrix = next(matrices_iterator)
     # deep copy to avoid modification of first matrix
-    result_matrix = [first_matrix_row[:] for first_matrix_row in first_matrix]
+    result_matrix: MatrixType = [
+        first_matrix_row[:] for first_matrix_row in first_matrix
+    ]
     # continuously subtraction
     for other_matrix in matrices_iterator:
         for row_index, (result_matrix_row, other_matrix_row) in enumerate(
@@ -43,7 +47,9 @@ def matrix_multiply(*matrices: MatrixType) -> MatrixType:
     matrices_iterator = iter(matrices)
     first_matrix = next(matrices_iterator)
     # deep copy to avoid modification of first matrix
-    result_matrix = [first_matrix_row[:] for first_matrix_row in first_matrix]
+    result_matrix: MatrixType = [
+        first_matrix_row[:] for first_matrix_row in first_matrix
+    ]
     # continuously multiplication
     for other_matrix in matrices_iterator:
         other_matrix = matrix_transpose(other_matrix)
