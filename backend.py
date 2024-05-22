@@ -239,23 +239,7 @@ class Camera(object):
         self._update_trigonometrics()
         self._update_vector()
 
-    def _update_trigonometrics(self) -> None:
-        yaw_radians = math.radians(-self._yaw)
-        pitch_radians = math.radians(self._pitch)
-        roll_radians = math.radians(self._roll)
-        self._sin_yaw = math.sin(yaw_radians)
-        self._cos_yaw = math.cos(yaw_radians)
-        self._sin_pitch = math.sin(pitch_radians)
-        self._cos_pitch = math.cos(pitch_radians)
-        self._sin_roll = math.sin(roll_radians)
-        self._cos_roll = math.cos(roll_radians)
-
-    def _update_vector(self) -> None:
-        self._vector_x = self._sin_pitch  # X component
-        self._vector_y = 0  # Y component
-        # (self._cos_yaw * self._sin_roll - self._sin_yaw * self._cos_roll)
-        self._vector_z = self._cos_pitch  # Z component
-
+    # Properties
     @property
     def info(self) -> tuple[str, ...]:
         return (
@@ -292,16 +276,52 @@ class Camera(object):
     def vector(self) -> tuple[float, float, float]:
         return (self._vector_x, self._vector_y, self._vector_z)
 
-    def move(self, *, x: float = 0.0, y: float = 0.0, z: float = 0.0) -> None:
-        self._x += x
-        self._y += y
-        self._z += z
+    # Move methods
+    def move_forward(self) -> None:
+        self._x += self._vector_x
+        self._z += self._vector_z
 
-    def dash(self, *, x: float = 0.0, y: float = 0.0, z: float = 0.0) -> None:
-        self._x += x * 2
-        self._y += y * 2
-        self._z += z * 2
+    def move_backward(self) -> None:
+        self._x -= self._vector_x
+        self._z -= self._vector_z
 
+    def move_left(self) -> None:
+        self._x -= self._vector_z
+        self._z += self._vector_x
+
+    def move_right(self) -> None:
+        self._x += self._vector_z
+        self._z -= self._vector_x
+
+    def move_up(self) -> None:
+        self._y += 1.0
+
+    def move_down(self) -> None:
+        self._y -= 1.0
+
+    def dash_forward(self) -> None:
+        self._x += 2.0 * self._vector_x
+        self._z += 2.0 * self._vector_z
+
+    def dash_backward(self) -> None:
+        self._x -= 2.0 * self._vector_x
+        self._z -= 2.0 * self._vector_z
+
+    def dash_left(self) -> None:
+        self._x -= 2.0 * self._vector_z
+        self._z += 2.0 * self._vector_x
+
+    def dash_right(self) -> None:
+        self._x += 2.0 * self._vector_z
+        self._z -= 2.0 * self._vector_x
+
+    def dash_up(self) -> None:
+        self._y += 2.0
+
+    def dash_down(self) -> None:
+        self._y -= 2.0
+
+    # Rotate methods
     def rotate(
         self, *, yaw: float = 0.0, pitch: float = 0.0, roll: float = 0.0
     ) -> None:
@@ -320,18 +340,25 @@ class Camera(object):
         self._update_trigonometrics()
         self._update_vector()
 
+    # Trigonometrics and vector update methods
+    def _update_trigonometrics(self) -> None:
+        yaw_radians = math.radians(-self._yaw)
+        pitch_radians = math.radians(self._pitch)
+        roll_radians = math.radians(self._roll)
+        self._sin_yaw = math.sin(yaw_radians)
+        self._cos_yaw = math.cos(yaw_radians)
+        self._sin_pitch = math.sin(pitch_radians)
+        self._cos_pitch = math.cos(pitch_radians)
+        self._sin_roll = math.sin(roll_radians)
+        self._cos_roll = math.cos(roll_radians)
+
+    def _update_vector(self) -> None:
+        self._vector_x = self._sin_pitch  # X component
+        self._vector_y = 0.0  # Y component
+        self._vector_z = self._cos_pitch  # Z component
+
 
 class Fake3DSceneGame(Backend):
-    def __init__(self) -> None:
-        self._keyboard_listener = KeyboardListener()
-        self._camera = Camera(15, (0.0, 0.0, -75.0), (0.0, 0.0, 0.0))
-        self._triangle_vertices = [
-            ((-25.0, -25.0, -25.0), (-25.0, 25.0, -25.0), (25.0, -25.0, -25.0)),  # ◣
-            ((25.0, 25.0, -25.0), (25.0, -25.0, -25.0), (-25.0, 25.0, -25.0)),  # ◥
-            ((-25.0, -25.0, 25.0), (-25.0, 25.0, 25.0), (25.0, -25.0, 25.0)),  # ◺
-            ((25.0, 25.0, 25.0), (25.0, -25.0, 25.0), (-25.0, 25.0, 25.0)),  # ◹
-        ]
-
     def _update_triangles(self):
         # Triangles
         self._triangles: list[Triangle] = []
@@ -480,6 +507,14 @@ class Fake3DSceneGame(Backend):
 
     @property
     def frames(self) -> FramesType:
+        self._keyboard_listener = KeyboardListener()
+        self._camera = Camera(15, (0.0, 0.0, -75.0), (0.0, 0.0, 0.0))
+        self._triangle_vertices = [
+            ((-25.0, -25.0, -25.0), (-25.0, 25.0, -25.0), (25.0, -25.0, -25.0)),  # ◣
+            ((25.0, 25.0, -25.0), (25.0, -25.0, -25.0), (-25.0, 25.0, -25.0)),  # ◥
+            ((-25.0, -25.0, 25.0), (-25.0, 25.0, 25.0), (25.0, -25.0, 25.0)),  # ◺
+            ((25.0, 25.0, 25.0), (25.0, -25.0, 25.0), (-25.0, 25.0, 25.0)),  # ◹
+        ]
         camera_info_length = len(self._camera.info)
         self._update_triangles()
         while True:
@@ -490,27 +525,26 @@ class Fake3DSceneGame(Backend):
             key = self._keyboard_listener.get()
             # Camera controlling
             # Position
-            camera_vector_x, _, camera_vector_z = self._camera.vector
             if key == "w":
-                self._camera.move(x=+camera_vector_x, y=+0.0, z=+camera_vector_z)
+                self._camera.move_forward()
             elif key == "s":
-                self._camera.move(x=-camera_vector_x, y=+0.0, z=-camera_vector_z)
+                self._camera.move_backward()
             elif key == "a":
-                self._camera.move(x=-camera_vector_z, y=+0.0, z=+camera_vector_x)
+                self._camera.move_left()
             elif key == "d":
-                self._camera.move(x=+camera_vector_z, y=+0.0, z=-camera_vector_x)
+                self._camera.move_right()
             elif key == "W":
-                self._camera.dash(x=+camera_vector_x, y=+0.0, z=+camera_vector_z)
+                self._camera.dash_forward()
             elif key == "S":
-                self._camera.dash(x=-camera_vector_x, y=+0.0, z=-camera_vector_z)
+                self._camera.dash_backward()
             elif key == "A":
-                self._camera.dash(x=-camera_vector_z, y=+0.0, z=+camera_vector_x)
+                self._camera.dash_left()
             elif key == "D":
-                self._camera.dash(x=+camera_vector_z, y=+0.0, z=-camera_vector_x)
+                self._camera.dash_right()
             elif key == " ":
-                self._camera.move(x=0.0, y=+1.0, z=0.0)
+                self._camera.move_up()
             elif key == "\r":
-                self._camera.move(x=0.0, y=-1.0, z=0.0)
+                self._camera.move_down()
             # Rotation
             if key == "8":
                 self._camera.rotate(yaw=+1.0, pitch=0.0, roll=0.0)
