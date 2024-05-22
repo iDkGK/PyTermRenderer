@@ -262,7 +262,7 @@ class Camera(object):
         return (self._yaw, self._pitch, self._roll)
 
     @property
-    def trigonometricss(self) -> tuple[float, float, float, float, float, float]:
+    def trigonometrics(self) -> tuple[float, float, float, float, float, float]:
         return (
             self._sin_yaw,
             self._cos_yaw,
@@ -398,7 +398,7 @@ class Fake3DSceneGame(Backend):
             camera_cos_pitch,
             camera_sin_roll,
             camera_cos_roll,
-        ) = self._camera.trigonometricss
+        ) = self._camera.trigonometrics
         # Iteration over all triangles
         # Assuming that every triangle is ▲abc
         for triangle_vertices in self._triangle_vertices:
