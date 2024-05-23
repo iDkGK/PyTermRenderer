@@ -611,6 +611,9 @@ class SmoothCamera(Camera):
         super(SmoothCamera, self).reset()
 
 
+GRAVITY = 0.1
+
+
 class PlayerCamera(SmoothCamera):
     def __init__(
         self,
@@ -619,14 +622,13 @@ class PlayerCamera(SmoothCamera):
         view: tuple[int, int],
         coordinate: tuple[float, float, float],
         rotation: tuple[float, float, float],
-        gravity: float = 0.1,
-        jump_strength: float = 0.5,
         move_speed: float = 1.0,
         dash_speed: float = 2.0,
         deacceleration_rate: float = 0.5,
+        jump_strength: float = 0.5,
     ) -> None:
-        self._gravity = abs(gravity)
         self._jump_height = abs(jump_strength)
+        self._gravity = abs(GRAVITY)
         super(PlayerCamera, self).__init__(
             fov=fov,
             view=view,
