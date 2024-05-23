@@ -1,4 +1,5 @@
 import math
+from pathlib import Path
 from hintings import MatrixType
 
 
@@ -123,6 +124,65 @@ class Triangle(object):
         return True
 
 
+class Object(object):
+    def __init__(self, filepath: str) -> None:
+        self._filepath = Path(filepath)
+        self._name = ""
+        self._triangle_vertices: list[
+            tuple[
+                tuple[float, float, float],
+                tuple[float, float, float],
+                tuple[float, float, float],
+            ]
+        ] = []
+        # Parse file data and retrieve triangles vertices
+        vertex_coordinates: list[tuple[float, float, float]] = []
+        normal_vectors: list[tuple[float, float, float]] = []
+        for line in self._filepath.read_text().strip().splitlines():
+            data_type, *data = line.strip().split()
+            if data_type == "o":
+                self._name = " ".join(data)
+            elif data_type == "v":
+                x, y, z, *_ = tuple(map(float, data))
+                vertex_coordinates.append((x, y, z))
+            elif data_type == "vn":
+                x, y, z, *_ = tuple(map(float, data))
+                normal_vectors.append((x, y, z))
+            elif data_type == "vt":
+                pass
+            elif data_type == "s":
+                pass
+            elif data_type == "f":
+                pass
+        # TODO: implement obj file parser.
+        # Temporary hack for debugging
+        self._triangle_vertices = [
+            ((-25.0, -25.0, -25.0), (-25.0, 25.0, -25.0), (25.0, -25.0, -25.0)),  # ◣
+            ((25.0, 25.0, -25.0), (25.0, -25.0, -25.0), (-25.0, 25.0, -25.0)),  # ◥
+            ((-25.0, -25.0, 25.0), (-25.0, 25.0, 25.0), (25.0, -25.0, 25.0)),  # ◺
+            ((25.0, 25.0, 25.0), (25.0, -25.0, 25.0), (-25.0, 25.0, 25.0)),  # ◹
+        ]
+
+    # Properties
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def triangle_vertices(self) -> list[
+        tuple[
+            tuple[float, float, float],
+            tuple[float, float, float],
+            tuple[float, float, float],
+        ]
+    ]:
+        return self._triangle_vertices
+
+    # Update methods
+    def update(self) -> None:
+        pass
+
+
 class ScreenTooSmallError(Exception):
     pass
 
@@ -152,8 +212,9 @@ class Camera(object):
         self._original_rotation = rotation
         self._move_speed = abs(move_speed)
         self._dash_speed = abs(dash_speed)
-        self._update_trigonometrics()
-        self._update_vector()
+        self._objects: list[Object] = []
+        self._triangles: list[Triangle] = []
+        self.update()
 
     # Properties
     @property
@@ -165,33 +226,6 @@ class Camera(object):
             % (self._yaw, self._pitch, self._roll),
             "direction vector (X, Y, Z): (%f, %f, %f)"
             % (self._vector_x, self._vector_y, self._vector_z),
-        )
-
-    @property
-    def focal(self) -> float:
-        return self._focal
-
-    @property
-    def x(self) -> float:
-        return self._x
-
-    @property
-    def y(self) -> float:
-        return self._y
-
-    @property
-    def z(self) -> float:
-        return self._z
-
-    @property
-    def trigonometrics(self) -> tuple[float, float, float, float, float, float]:
-        return (
-            self._sin_yaw,
-            self._cos_yaw,
-            self._sin_pitch,
-            self._cos_pitch,
-            self._sin_roll,
-            self._cos_roll,
         )
 
     # Move methods
@@ -253,18 +287,17 @@ class Camera(object):
         self._yaw = max(min(self._yaw, 90.0), -90.0)
         self._pitch %= 360.0
         self._roll %= 360.0
-        self._update_trigonometrics()
-        self._update_vector()
 
+    # Reset methods
     def reset(self) -> None:
         self._x, self._y, self._z = self._original_coordinate
         self._yaw, self._pitch, self._roll = self._original_rotation
-        self._update_trigonometrics()
-        self._update_vector()
 
     # Update methods
     def update(self) -> None:
-        pass
+        self._update_trigonometrics()
+        self._update_vector()
+        self._update_objects()
 
     def _update_trigonometrics(self) -> None:
         yaw_radians = math.radians(-self._yaw)
@@ -281,6 +314,151 @@ class Camera(object):
         self._vector_x = self._sin_pitch  # X component
         self._vector_y = 0.0  # Y component
         self._vector_z = self._cos_pitch  # Z component
+
+    def _update_objects(self):
+        # Triangles
+        self._triangles.clear()
+        # Iteration over all triangles
+        # Assuming that every triangle is ▲abc
+        for obj in self._objects:
+            for triangle_vertices in obj.triangle_vertices:
+                (
+                    (triangle_a_x, triangle_a_y, triangle_a_z),
+                    (triangle_b_x, triangle_b_y, triangle_b_z),
+                    (triangle_c_x, triangle_c_y, triangle_c_z),
+                ) = triangle_vertices
+                # Position
+                # Using vector for relative position
+                (
+                    distance_camera_triangle_a_x,
+                    distance_camera_triangle_a_y,
+                    distance_camera_triangle_a_z,
+                ) = (
+                    triangle_a_x - self._x,
+                    triangle_a_y - self._y,
+                    triangle_a_z - self._z,
+                )
+                (
+                    distance_camera_triangle_b_x,
+                    distance_camera_triangle_b_y,
+                    distance_camera_triangle_b_z,
+                ) = (
+                    triangle_b_x - self._x,
+                    triangle_b_y - self._y,
+                    triangle_b_z - self._z,
+                )
+                (
+                    distance_camera_triangle_c_x,
+                    distance_camera_triangle_c_y,
+                    distance_camera_triangle_c_z,
+                ) = (
+                    triangle_c_x - self._x,
+                    triangle_c_y - self._y,
+                    triangle_c_z - self._z,
+                )
+                # Rotation
+                # Z-axis rotation that affects X/Y coordinates
+                distance_camera_triangle_a_x, distance_camera_triangle_a_y = (
+                    distance_camera_triangle_a_x * self._cos_roll
+                    + distance_camera_triangle_a_y * self._sin_roll,
+                    -distance_camera_triangle_a_x * self._sin_roll
+                    + distance_camera_triangle_a_y * self._cos_roll,
+                )
+                distance_camera_triangle_b_x, distance_camera_triangle_b_y = (
+                    distance_camera_triangle_b_x * self._cos_roll
+                    + distance_camera_triangle_b_y * self._sin_roll,
+                    -distance_camera_triangle_b_x * self._sin_roll
+                    + distance_camera_triangle_b_y * self._cos_roll,
+                )
+                distance_camera_triangle_c_x, distance_camera_triangle_c_y = (
+                    distance_camera_triangle_c_x * self._cos_roll
+                    + distance_camera_triangle_c_y * self._sin_roll,
+                    -distance_camera_triangle_c_x * self._sin_roll
+                    + distance_camera_triangle_c_y * self._cos_roll,
+                )
+                # Y-axis rotation that affects X/Z coordinates
+                distance_camera_triangle_a_x, distance_camera_triangle_a_z = (
+                    distance_camera_triangle_a_x * self._cos_pitch
+                    - distance_camera_triangle_a_z * self._sin_pitch,
+                    distance_camera_triangle_a_x * self._sin_pitch
+                    + distance_camera_triangle_a_z * self._cos_pitch,
+                )
+                distance_camera_triangle_b_x, distance_camera_triangle_b_z = (
+                    distance_camera_triangle_b_x * self._cos_pitch
+                    - distance_camera_triangle_b_z * self._sin_pitch,
+                    distance_camera_triangle_b_x * self._sin_pitch
+                    + distance_camera_triangle_b_z * self._cos_pitch,
+                )
+                distance_camera_triangle_c_x, distance_camera_triangle_c_z = (
+                    distance_camera_triangle_c_x * self._cos_pitch
+                    - distance_camera_triangle_c_z * self._sin_pitch,
+                    distance_camera_triangle_c_x * self._sin_pitch
+                    + distance_camera_triangle_c_z * self._cos_pitch,
+                )
+                # X-axis rotation that affects Y/Z coordinates
+                distance_camera_triangle_a_y, distance_camera_triangle_a_z = (
+                    distance_camera_triangle_a_y * self._cos_yaw
+                    + distance_camera_triangle_a_z * self._sin_yaw,
+                    -distance_camera_triangle_a_y * self._sin_yaw
+                    + distance_camera_triangle_a_z * self._cos_yaw,
+                )
+                distance_camera_triangle_b_y, distance_camera_triangle_b_z = (
+                    distance_camera_triangle_b_y * self._cos_yaw
+                    + distance_camera_triangle_b_z * self._sin_yaw,
+                    -distance_camera_triangle_b_y * self._sin_yaw
+                    + distance_camera_triangle_b_z * self._cos_yaw,
+                )
+                distance_camera_triangle_c_y, distance_camera_triangle_c_z = (
+                    distance_camera_triangle_c_y * self._cos_yaw
+                    + distance_camera_triangle_c_z * self._sin_yaw,
+                    -distance_camera_triangle_c_y * self._sin_yaw
+                    + distance_camera_triangle_c_z * self._cos_yaw,
+                )
+                # Simple culling. TODO: advanced culling mechanism.
+                if (
+                    distance_camera_triangle_a_z > 0.0
+                    and distance_camera_triangle_b_z > 0.0
+                    and distance_camera_triangle_c_z > 0.0
+                ):
+                    self._triangles.append(
+                        Triangle(
+                            vertex_a=(
+                                self._focal
+                                * distance_camera_triangle_a_x
+                                / distance_camera_triangle_a_z,
+                                self._focal
+                                * distance_camera_triangle_a_y
+                                / distance_camera_triangle_a_z,
+                            ),
+                            vertex_b=(
+                                self._focal
+                                * distance_camera_triangle_b_x
+                                / distance_camera_triangle_b_z,
+                                self._focal
+                                * distance_camera_triangle_b_y
+                                / distance_camera_triangle_b_z,
+                            ),
+                            vertex_c=(
+                                self._focal
+                                * distance_camera_triangle_c_x
+                                / distance_camera_triangle_c_z,
+                                self._focal
+                                * distance_camera_triangle_c_y
+                                / distance_camera_triangle_c_z,
+                            ),
+                        )
+                    )
+
+    # Draw methods
+    def get_pixel(self, x: float, y: float) -> tuple[int, ...]:
+        for triangle in self._triangles:
+            if (x, y) in triangle:
+                return (255, 255, 255, 255, ord("█"))
+        return (255, 255, 255, 255, ord(" "))
+
+    # Objects-related methods
+    def add_object(self, obj: Object):
+        self._objects.append(obj)
 
 
 class SmoothCamera(Camera):
@@ -301,7 +479,7 @@ class SmoothCamera(Camera):
         self._move_acceleration = abs(move_speed / 2.0)
         self._dash_acceleration = abs(dash_speed / 2.0)
         self._deacceleration_rate = max(min(deacceleration_rate, 1.0), 0.0)
-        super().__init__(
+        super(SmoothCamera, self).__init__(
             fov=fov,
             view=view,
             coordinate=coordinate,
@@ -423,12 +601,14 @@ class SmoothCamera(Camera):
         self._acceleration_x -= self._acceleration_x * self._deacceleration_rate
         self._acceleration_y -= self._acceleration_y * self._deacceleration_rate
         self._acceleration_z -= self._acceleration_z * self._deacceleration_rate
+        super(SmoothCamera, self).update()
 
+    # Reset methods
     def reset(self) -> None:
         self._acceleration_x = 0.0
         self._acceleration_y = 0.0
         self._acceleration_z = 0.0
-        super().reset()
+        super(SmoothCamera, self).reset()
 
 
 class PlayerCamera(SmoothCamera):
@@ -447,7 +627,7 @@ class PlayerCamera(SmoothCamera):
     ) -> None:
         self._gravity = abs(gravity)
         self._jump_height = abs(jump_strength)
-        super().__init__(
+        super(PlayerCamera, self).__init__(
             fov=fov,
             view=view,
             coordinate=coordinate,
@@ -457,6 +637,7 @@ class PlayerCamera(SmoothCamera):
             deacceleration_rate=deacceleration_rate,
         )
 
+    # Move methods
     def move_upward(self) -> None:
         if self._y <= 0.0:
             self._acceleration_y = self._jump_height
@@ -478,6 +659,7 @@ class PlayerCamera(SmoothCamera):
     def crouch(self) -> None:
         pass
 
+    # Update methods
     def update(self) -> None:
         self._x += self._acceleration_x
         self._z += self._acceleration_z
@@ -490,3 +672,4 @@ class PlayerCamera(SmoothCamera):
             self._acceleration_y -= self._gravity * self._deacceleration_rate
         else:
             self._y = 0.0
+        super(SmoothCamera, self).update()
