@@ -253,7 +253,10 @@ class Fake3DSceneGame(Backend):
     @property
     def frames(self) -> FramesType:
         self._player_camera = PlayerCamera(
-            fov=90, coordinate=(0.0, 0.0, 0.0), rotation=(0.0, 0.0, 0.0)
+            fov=90,
+            view=os.get_terminal_size(),
+            coordinate=(0.0, 0.0, 0.0),
+            rotation=(0.0, 0.0, 0.0),
         )
         self._triangle_vertices = [
             ((-25.0, -25.0, -25.0), (-25.0, 25.0, -25.0), (25.0, -25.0, -25.0)),  # ◣
@@ -406,7 +409,11 @@ class Fake3DSceneGame(Backend):
         self._triangles: list[Triangle] = []
         # Camera properties
         camera_focal = self._player_camera.focal
-        camera_x, camera_y, camera_z = self._player_camera.coordinate
+        camera_x, camera_y, camera_z = (
+            self._player_camera.x,
+            self._player_camera.y,
+            self._player_camera.z,
+        )
         (
             camera_sin_yaw,
             camera_cos_yaw,
@@ -521,28 +528,28 @@ class Fake3DSceneGame(Backend):
                 self._triangles.append(
                     Triangle(
                         vertex_a=(
-                            distance_camera_triangle_a_x
-                            / distance_camera_triangle_a_z
-                            / camera_focal,
-                            distance_camera_triangle_a_y
-                            / distance_camera_triangle_a_z
-                            / camera_focal,
+                            camera_focal
+                            * distance_camera_triangle_a_x
+                            / distance_camera_triangle_a_z,
+                            camera_focal
+                            * distance_camera_triangle_a_y
+                            / distance_camera_triangle_a_z,
                         ),
                         vertex_b=(
-                            distance_camera_triangle_b_x
-                            / distance_camera_triangle_b_z
-                            / camera_focal,
-                            distance_camera_triangle_b_y
-                            / distance_camera_triangle_b_z
-                            / camera_focal,
+                            camera_focal
+                            * distance_camera_triangle_b_x
+                            / distance_camera_triangle_b_z,
+                            camera_focal
+                            * distance_camera_triangle_b_y
+                            / distance_camera_triangle_b_z,
                         ),
                         vertex_c=(
-                            distance_camera_triangle_c_x
-                            / distance_camera_triangle_c_z
-                            / camera_focal,
-                            distance_camera_triangle_c_y
-                            / distance_camera_triangle_c_z
-                            / camera_focal,
+                            camera_focal
+                            * distance_camera_triangle_c_x
+                            / distance_camera_triangle_c_z,
+                            camera_focal
+                            * distance_camera_triangle_c_y
+                            / distance_camera_triangle_c_z,
                         ),
                     )
                 )

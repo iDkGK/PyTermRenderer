@@ -123,18 +123,29 @@ class Triangle(object):
         return True
 
 
+class ScreenTooSmallError(Exception):
+    pass
+
+
 class Camera(object):
     def __init__(
         self,
         *,
         fov: float,
+        view: tuple[int, int],
         coordinate: tuple[float, float, float],
         rotation: tuple[float, float, float],
         move_speed: float = 1.0,
         dash_speed: float = 2.0,
     ) -> None:
+        screen_width, screen_height = view
+        screen_width = (screen_width // 2) * 2 or 1
+        screen_height = screen_height - 4 or 1
+        if screen_height < 0:
+            raise ScreenTooSmallError("screen is too small to render objects.")
+        half_length = max(screen_width, screen_height) / 2
         self._fov = fov
-        self._focal = math.atan(math.radians(fov / 2.0)) / 10.0
+        self._focal = half_length / math.tan(math.radians(fov / 2.0))
         self._x, self._y, self._z = coordinate
         self._original_coordinate = coordinate
         self._yaw, self._pitch, self._roll = rotation
@@ -149,9 +160,11 @@ class Camera(object):
     def info(self) -> tuple[str, ...]:
         return (
             "FOV: %f" % self._fov,
-            "coordinate (X, Y, Z): (%f, %f, %f)" % self.coordinate,
-            "rotation (Yaw, Pitch, Roll): (%f, %f, %f)" % self.rotation,
-            "direction vector (X, Y, Z): (%f, %f, %f)" % self.vector,
+            "coordinate (X, Y, Z): (%f, %f, %f)" % (self._x, self._y, self._z),
+            "rotation (Yaw, Pitch, Roll): (%f, %f, %f)"
+            % (self._yaw, self._pitch, self._roll),
+            "direction vector (X, Y, Z): (%f, %f, %f)"
+            % (self._vector_x, self._vector_y, self._vector_z),
         )
 
     @property
@@ -159,12 +172,16 @@ class Camera(object):
         return self._focal
 
     @property
-    def coordinate(self) -> tuple[float, float, float]:
-        return (self._x, self._y, self._z)
+    def x(self) -> float:
+        return self._x
 
     @property
-    def rotation(self) -> tuple[float, float, float]:
-        return (self._yaw, self._pitch, self._roll)
+    def y(self) -> float:
+        return self._y
+
+    @property
+    def z(self) -> float:
+        return self._z
 
     @property
     def trigonometrics(self) -> tuple[float, float, float, float, float, float]:
@@ -176,10 +193,6 @@ class Camera(object):
             self._sin_roll,
             self._cos_roll,
         )
-
-    @property
-    def vector(self) -> tuple[float, float, float]:
-        return (self._vector_x, self._vector_y, self._vector_z)
 
     # Move methods
     def move_forward(self) -> None:
@@ -228,7 +241,11 @@ class Camera(object):
 
     # Rotate methods
     def rotate(
-        self, *, yaw: float = 0.0, pitch: float = 0.0, roll: float = 0.0
+        self,
+        *,
+        yaw: float = 0.0,
+        pitch: float = 0.0,
+        roll: float = 0.0,
     ) -> None:
         self._yaw += yaw
         self._pitch += pitch
@@ -271,6 +288,7 @@ class SmoothCamera(Camera):
         self,
         *,
         fov: float,
+        view: tuple[int, int],
         coordinate: tuple[float, float, float],
         rotation: tuple[float, float, float],
         move_speed: float = 1.0,
@@ -285,6 +303,7 @@ class SmoothCamera(Camera):
         self._deacceleration_rate = max(min(deacceleration_rate, 1.0), 0.0)
         super().__init__(
             fov=fov,
+            view=view,
             coordinate=coordinate,
             rotation=rotation,
             move_speed=move_speed,
@@ -417,18 +436,20 @@ class PlayerCamera(SmoothCamera):
         self,
         *,
         fov: float,
+        view: tuple[int, int],
         coordinate: tuple[float, float, float],
         rotation: tuple[float, float, float],
-        gravity: float = 1.0,
-        jump_height: float = 5.0,
+        gravity: float = 0.1,
+        jump_strength: float = 0.5,
         move_speed: float = 1.0,
         dash_speed: float = 2.0,
         deacceleration_rate: float = 0.5,
     ) -> None:
         self._gravity = abs(gravity)
-        self._jump_height = abs(jump_height)
+        self._jump_height = abs(jump_strength)
         super().__init__(
             fov=fov,
+            view=view,
             coordinate=coordinate,
             rotation=rotation,
             move_speed=move_speed,
