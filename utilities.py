@@ -134,6 +134,7 @@ class Camera(object):
         dash_speed: float = 2.0,
     ) -> None:
         self._fov = fov
+        self._focal = math.atan(math.radians(fov / 2.0)) / 10.0
         self._x, self._y, self._z = coordinate
         self._original_coordinate = coordinate
         self._yaw, self._pitch, self._roll = rotation
@@ -147,15 +148,15 @@ class Camera(object):
     @property
     def info(self) -> tuple[str, ...]:
         return (
-            "Camera FOV: %f" % self.fov,
-            "Camera coordinate (X, Y, Z): (%f, %f, %f)" % self.coordinate,
-            "Camera rotation (Yaw, Pitch, Roll): (%f, %f, %f)" % self.rotation,
-            "Camera direction vector (X, Y, Z): (%f, %f, %f)" % self.vector,
+            "FOV: %f" % self._fov,
+            "coordinate (X, Y, Z): (%f, %f, %f)" % self.coordinate,
+            "rotation (Yaw, Pitch, Roll): (%f, %f, %f)" % self.rotation,
+            "direction vector (X, Y, Z): (%f, %f, %f)" % self.vector,
         )
 
     @property
-    def fov(self) -> float:
-        return self._fov
+    def focal(self) -> float:
+        return self._focal
 
     @property
     def coordinate(self) -> tuple[float, float, float]:
@@ -411,7 +412,7 @@ class SmoothCamera(Camera):
         super().reset()
 
 
-class GravitySmoothCamera(SmoothCamera):
+class PlayerCamera(SmoothCamera):
     def __init__(
         self,
         *,
@@ -447,6 +448,13 @@ class GravitySmoothCamera(SmoothCamera):
             self._acceleration_y = self._jump_height
 
     def dash_downward(self) -> None:
+        pass
+
+    def jump(self) -> None:
+        if self._y <= 0.0:
+            self._acceleration_y = self._jump_height
+
+    def crouch(self) -> None:
         pass
 
     def update(self) -> None:

@@ -7,7 +7,7 @@ from datetime import datetime
 
 from decoder import PNGSequence
 from hintings import FrameType, FramesType, RowType, EffectModeType
-from utilities import Triangle, GravitySmoothCamera
+from utilities import Triangle, PlayerCamera
 
 ASCII_CHARACTERS = "".join((string.digits, string.ascii_letters, string.punctuation))
 BINARY_CHARACTERS = "01" * 32
@@ -252,8 +252,8 @@ class Fake3DSceneGame(Backend):
 
     @property
     def frames(self) -> FramesType:
-        self._camera = GravitySmoothCamera(
-            fov=15, coordinate=(0.0, 0.0, 0.0), rotation=(0.0, 0.0, 0.0)
+        self._player_camera = PlayerCamera(
+            fov=90, coordinate=(0.0, 0.0, 0.0), rotation=(0.0, 0.0, 0.0)
         )
         self._triangle_vertices = [
             ((-25.0, -25.0, -25.0), (-25.0, 25.0, -25.0), (25.0, -25.0, -25.0)),  # ◣
@@ -261,7 +261,7 @@ class Fake3DSceneGame(Backend):
             ((-25.0, -25.0, 25.0), (-25.0, 25.0, 25.0), (25.0, -25.0, 25.0)),  # ◺
             ((25.0, 25.0, 25.0), (25.0, -25.0, 25.0), (-25.0, 25.0, 25.0)),  # ◹
         ]
-        camera_info_length = len(self._camera.info)
+        camera_info_length = len(self._player_camera.info)
         self._update_triangles()
         while True:
             screen_width, screen_height = os.get_terminal_size()
@@ -275,37 +275,37 @@ class Fake3DSceneGame(Backend):
             if self._keyboard is not None:
                 # Forward
                 if self._keyboard.is_pressed("shift+w"):
-                    self._camera.dash_forward()
+                    self._player_camera.dash_forward()
                 elif self._keyboard.is_pressed("w"):
-                    self._camera.move_forward()
+                    self._player_camera.move_forward()
                 # Backward
                 if self._keyboard.is_pressed("shift+s"):
-                    self._camera.dash_backward()
+                    self._player_camera.dash_backward()
                 elif self._keyboard.is_pressed("s"):
-                    self._camera.move_backward()
+                    self._player_camera.move_backward()
                 # Leftward
                 if self._keyboard.is_pressed("shift+a"):
-                    self._camera.dash_leftward()
+                    self._player_camera.dash_leftward()
                 elif self._keyboard.is_pressed("a"):
-                    self._camera.move_leftward()
+                    self._player_camera.move_leftward()
                 # Rightward
                 if self._keyboard.is_pressed("shift+d"):
-                    self._camera.dash_rightward()
+                    self._player_camera.dash_rightward()
                 elif self._keyboard.is_pressed("d"):
-                    self._camera.move_rightward()
+                    self._player_camera.move_rightward()
                 # Upward
                 if self._keyboard.is_pressed("shift+space"):
-                    self._camera.dash_upward()
+                    self._player_camera.dash_upward()
                 elif self._keyboard.is_pressed("space"):
-                    self._camera.move_upward()
+                    self._player_camera.move_upward()
                 # Downward
                 if self._keyboard.is_pressed("ctrl+shift"):
-                    self._camera.dash_downward()
+                    self._player_camera.dash_downward()
                 elif self._keyboard.is_pressed("ctrl"):
-                    self._camera.move_downward()
+                    self._player_camera.move_downward()
                 # Reset
                 if self._keyboard.is_pressed("r"):
-                    self._camera.reset()
+                    self._player_camera.reset()
                 # Exit
                 if self._keyboard.is_pressed("escape"):
                     sys.exit(0)
@@ -315,7 +315,7 @@ class Fake3DSceneGame(Backend):
                 mouse_x, mouse_y = self._mouse.get_position()
                 if mouse_x != 960 or mouse_y != 540:
                     self._mouse.move(960, 540)  # type: ignore
-                    self._camera.rotate(
+                    self._player_camera.rotate(
                         yaw=-(mouse_y - 540) / 18,
                         pitch=+(mouse_x - 960) / 18,
                     )
@@ -326,33 +326,33 @@ class Fake3DSceneGame(Backend):
                 if self._keyboard is None:
                     # Forward
                     if key == "W":
-                        self._camera.dash_forward()
+                        self._player_camera.dash_forward()
                     elif key == "w":
-                        self._camera.move_forward()
+                        self._player_camera.move_forward()
                     # Backward
                     elif key == "S":
-                        self._camera.dash_backward()
+                        self._player_camera.dash_backward()
                     elif key == "s":
-                        self._camera.move_backward()
+                        self._player_camera.move_backward()
                     # Leftward
                     elif key == "A":
-                        self._camera.dash_leftward()
+                        self._player_camera.dash_leftward()
                     elif key == "a":
-                        self._camera.move_leftward()
+                        self._player_camera.move_leftward()
                     # Rightward
                     elif key == "D":
-                        self._camera.dash_rightward()
+                        self._player_camera.dash_rightward()
                     elif key == "d":
-                        self._camera.move_rightward()
+                        self._player_camera.move_rightward()
                     # Upward
                     elif key == " ":
-                        self._camera.move_upward()
+                        self._player_camera.move_upward()
                     # Downward
                     elif key == "\r":
-                        self._camera.move_downward()
+                        self._player_camera.move_downward()
                     # Reset
                     elif key == "r":
-                        self._camera.reset()
+                        self._player_camera.reset()
                     # Exit
                     elif key == "\x1b":
                         self._keyboard_listener.stop()
@@ -361,20 +361,20 @@ class Fake3DSceneGame(Backend):
                 if self._mouse is None:
                     # Yaw
                     if key == "8":
-                        self._camera.rotate(yaw=+1.0, pitch=0.0, roll=0.0)
+                        self._player_camera.rotate(yaw=+1.0, pitch=0.0, roll=0.0)
                     elif key == "2":
-                        self._camera.rotate(yaw=-1.0, pitch=0.0, roll=0.0)
+                        self._player_camera.rotate(yaw=-1.0, pitch=0.0, roll=0.0)
                     # Pitch
                     elif key == "4":
-                        self._camera.rotate(yaw=0.0, pitch=-1.0, roll=0.0)
+                        self._player_camera.rotate(yaw=0.0, pitch=-1.0, roll=0.0)
                     elif key == "6":
-                        self._camera.rotate(yaw=0.0, pitch=+1.0, roll=0.0)
+                        self._player_camera.rotate(yaw=0.0, pitch=+1.0, roll=0.0)
                     # Roll
                     elif key == "e":
-                        self._camera.rotate(yaw=0.0, pitch=0.0, roll=+1.0)
+                        self._player_camera.rotate(yaw=0.0, pitch=0.0, roll=+1.0)
                     elif key == "q":
-                        self._camera.rotate(yaw=0.0, pitch=0.0, roll=-1.0)
-            self._camera.update()
+                        self._player_camera.rotate(yaw=0.0, pitch=0.0, roll=-1.0)
+            self._player_camera.update()
             self._update_triangles()
 
             # Frame generation
@@ -393,7 +393,7 @@ class Fake3DSceneGame(Backend):
                     row_buffer.append((255, 255, 255, 255, ord(character)))
                 frame_buffer.insert(0, row_buffer)
             # Camera info
-            for camera_info in self._camera.info:
+            for camera_info in self._player_camera.info:
                 row_buffer: RowType = []
                 for character in camera_info.ljust(screen_width)[:screen_width]:
                     row_buffer.append((255, 255, 255, 255, ord(character)))
@@ -405,8 +405,8 @@ class Fake3DSceneGame(Backend):
         # Triangles
         self._triangles: list[Triangle] = []
         # Camera properties
-        camera_fov = self._camera.fov
-        camera_x, camera_y, camera_z = self._camera.coordinate
+        camera_focal = self._player_camera.focal
+        camera_x, camera_y, camera_z = self._player_camera.coordinate
         (
             camera_sin_yaw,
             camera_cos_yaw,
@@ -414,7 +414,7 @@ class Fake3DSceneGame(Backend):
             camera_cos_pitch,
             camera_sin_roll,
             camera_cos_roll,
-        ) = self._camera.trigonometrics
+        ) = self._player_camera.trigonometrics
         # Iteration over all triangles
         # Assuming that every triangle is ▲abc
         for triangle_vertices in self._triangle_vertices:
@@ -521,28 +521,28 @@ class Fake3DSceneGame(Backend):
                 self._triangles.append(
                     Triangle(
                         vertex_a=(
-                            (distance_camera_triangle_a_x)
-                            * camera_fov
-                            / (distance_camera_triangle_a_z),
-                            (distance_camera_triangle_a_y)
-                            * camera_fov
-                            / (distance_camera_triangle_a_z),
+                            distance_camera_triangle_a_x
+                            / distance_camera_triangle_a_z
+                            / camera_focal,
+                            distance_camera_triangle_a_y
+                            / distance_camera_triangle_a_z
+                            / camera_focal,
                         ),
                         vertex_b=(
-                            (distance_camera_triangle_b_x)
-                            * camera_fov
-                            / (distance_camera_triangle_b_z),
-                            (distance_camera_triangle_b_y)
-                            * camera_fov
-                            / (distance_camera_triangle_b_z),
+                            distance_camera_triangle_b_x
+                            / distance_camera_triangle_b_z
+                            / camera_focal,
+                            distance_camera_triangle_b_y
+                            / distance_camera_triangle_b_z
+                            / camera_focal,
                         ),
                         vertex_c=(
-                            (distance_camera_triangle_c_x)
-                            * camera_fov
-                            / (distance_camera_triangle_c_z),
-                            (distance_camera_triangle_c_y)
-                            * camera_fov
-                            / (distance_camera_triangle_c_z),
+                            distance_camera_triangle_c_x
+                            / distance_camera_triangle_c_z
+                            / camera_focal,
+                            distance_camera_triangle_c_y
+                            / distance_camera_triangle_c_z
+                            / camera_focal,
                         ),
                     )
                 )
