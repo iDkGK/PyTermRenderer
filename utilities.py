@@ -195,8 +195,8 @@ class Camera(object):
         view: tuple[int, int],
         coordinate: tuple[float, float, float],
         rotation: tuple[float, float, float],
-        move_speed: float = 1.0,
-        dash_speed: float = 2.0,
+        move_speed: float = 0.5,
+        dash_speed: float = 1.0,
     ) -> None:
         screen_width, screen_height = view
         screen_width = (screen_width // 2) * 2 or 1
@@ -221,10 +221,10 @@ class Camera(object):
     def info(self) -> tuple[str, ...]:
         return (
             "FOV: %f" % self._fov,
-            "coordinate (X, Y, Z): (%f, %f, %f)" % (self._x, self._y, self._z),
-            "rotation (Yaw, Pitch, Roll): (%f, %f, %f)"
+            "Coordinate (X, Y, Z): (%f, %f, %f)" % (self._x, self._y, self._z),
+            "Rotation (Yaw, Pitch, Roll): (%f, %f, %f)"
             % (self._yaw, self._pitch, self._roll),
-            "direction vector (X, Y, Z): (%f, %f, %f)"
+            "Direction vector (X, Y, Z): (%f, %f, %f)"
             % (self._vector_x, self._vector_y, self._vector_z),
         )
 
@@ -469,8 +469,8 @@ class SmoothCamera(Camera):
         view: tuple[int, int],
         coordinate: tuple[float, float, float],
         rotation: tuple[float, float, float],
-        move_speed: float = 1.0,
-        dash_speed: float = 2.0,
+        move_speed: float = 0.5,
+        dash_speed: float = 1.0,
         deacceleration_rate: float = 0.5,
     ) -> None:
         self._acceleration_x = 0.0
@@ -622,8 +622,8 @@ class PlayerCamera(SmoothCamera):
         view: tuple[int, int],
         coordinate: tuple[float, float, float],
         rotation: tuple[float, float, float],
-        move_speed: float = 1.0,
-        dash_speed: float = 2.0,
+        move_speed: float = 0.5,
+        dash_speed: float = 1.0,
         deacceleration_rate: float = 0.5,
         jump_strength: float = 0.5,
     ) -> None:
