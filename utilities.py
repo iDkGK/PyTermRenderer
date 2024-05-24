@@ -671,7 +671,7 @@ class PlayerCamera(SmoothCamera):
         inertia_ratio: float = 0.5,
         jump_strength: float = 0.5,
     ) -> None:
-        self._jump_height = abs(jump_strength)
+        self._jump_strength = abs(jump_strength)
         self._gravity = abs(GRAVITY)
         super(PlayerCamera, self).__init__(
             fov=fov,
@@ -686,21 +686,21 @@ class PlayerCamera(SmoothCamera):
     # Move methods
     def move_upward(self) -> None:
         if self._y <= 0.0:
-            self._acceleration_y = self._jump_height
+            self._acceleration_y = self._jump_strength
 
     def move_downward(self) -> None:
         pass
 
     def dash_upward(self) -> None:
         if self._y <= 0.0:
-            self._acceleration_y = self._jump_height
+            self._acceleration_y = self._jump_strength
 
     def dash_downward(self) -> None:
         pass
 
     def jump(self) -> None:
         if self._y <= 0.0:
-            self._acceleration_y = self._jump_height
+            self._acceleration_y = self._jump_strength
 
     def crouch(self) -> None:
         pass
