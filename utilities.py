@@ -224,14 +224,20 @@ class Camera(object):
         move_speed: float = 0.5,
         dash_speed: float = 1.0,
     ) -> None:
-        screen_width, screen_height = view
-        screen_width = (screen_width // 2) * 2 or 1
-        screen_height = screen_height - 4 or 1
-        if screen_height < 0:
-            raise ScreenTooSmallError("screen is too small to render objects.")
-        half_length = max(screen_width, screen_height) / 2
         self._fov = fov
-        self._focal = half_length / math.tan(math.radians(fov / 2.0))
+        self._screen_width, self._screen_height = view
+        self._screen_width = (self._screen_width // 2) * 2 or 2
+        self._half_width, self._half_height = (
+            self._screen_width / 2,
+            self._screen_height / 2,
+        )
+        if self._screen_height < 0:
+            raise ScreenTooSmallError("screen is too small to render objects.")
+        self._focal = (
+            max(self._screen_width, self._screen_height)
+            / math.tan(math.radians(fov / 2.0))
+            / 2
+        )
         self._x, self._y, self._z = coordinate
         self._original_coordinate = coordinate
         self._yaw, self._pitch, self._roll = rotation
@@ -240,18 +246,7 @@ class Camera(object):
         self._dash_speed = abs(dash_speed)
         self._objects: set[Object] = set()
         self._triangles: list[Triangle] = []
-
-    # Properties
-    @property
-    def info(self) -> tuple[str, ...]:
-        return (
-            "FOV: %f" % self._fov,
-            "Coordinate (X, Y, Z): (%f, %f, %f)" % (self._x, self._y, self._z),
-            "Rotation (Yaw, Pitch, Roll): (%f, %f, %f)"
-            % (self._yaw, self._pitch, self._roll),
-            "Direction vector (X, Y, Z): (%f, %f, %f)"
-            % (self._vector_x, self._vector_y, self._vector_z),
-        )
+        self._information: list[str] = []
 
     # Move methods
     def move_forward(self) -> None:
@@ -323,6 +318,7 @@ class Camera(object):
         self._update_trigonometrics()
         self._update_vector()
         self._update_objects()
+        self._update_infomation()
 
     def _update_trigonometrics(self) -> None:
         yaw_radians = math.radians(-self._yaw)
@@ -474,10 +470,34 @@ class Camera(object):
                         )
                     )
 
+    def _update_infomation(self) -> None:
+        self._information = [
+            ("FOV: %f" % self._fov).ljust(self._screen_width),
+            ("Coordinate (X, Y, Z): (%f, %f, %f)" % (self._x, self._y, self._z)).ljust(
+                self._screen_width
+            ),
+            (
+                "Rotation (Yaw, Pitch, Roll): (%f, %f, %f)"
+                % (self._yaw, self._pitch, self._roll)
+            ).ljust(self._screen_width),
+            (
+                "Direction vector (X, Y, Z): (%f, %f, %f)"
+                % (self._vector_x, self._vector_y, self._vector_z)
+            ).ljust(self._screen_width),
+        ]
+        self._information.reverse()
+
     # Draw methods
-    def get_pixel(self, x: float, y: float) -> tuple[int, ...]:
+    def get_pixel(self, x: int, y: int) -> tuple[int, ...]:
+        if (
+            self._information[y:]
+            and self._information[y:][0][x:]
+            and self._information[y:][0][x:][0] != " "
+        ):
+            return (255, 255, 255, 255, ord(self._information[y:][0][x:][0]))
+        coordinate = ((x - self._half_width) / 2, y - self._half_height)
         for triangle in self._triangles:
-            if (x, y) in triangle:
+            if coordinate in triangle:
                 return (255, 255, 255, 255, ord("█"))
         return (255, 255, 255, 255, ord(" "))
 

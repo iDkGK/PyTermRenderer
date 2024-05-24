@@ -262,17 +262,10 @@ class Fake3DSceneGame(Backend):
             rotation=(0.0, 0.0, 0.0),
         )
         smooth_camera.show_object(cube_object)
-        # Update once
-        cube_object.update()
-        smooth_camera.update()
-        # Other Variables
-        camera_info_length = len(smooth_camera.info)
         perf_counter = time.perf_counter_ns()
         while True:
             screen_width, screen_height = os.get_terminal_size()
-            screen_width = (screen_width // 2) * 2 or 1
-            screen_height = screen_height - camera_info_length or 1
-            half_width, half_height = screen_width / 2, screen_height / 2
+            screen_width = (screen_width // 2) * 2 or 2
 
             # Object update
             delta_time = (time.perf_counter_ns() - perf_counter) / 1e9
@@ -392,15 +385,7 @@ class Fake3DSceneGame(Backend):
             for y in range(0, screen_height):
                 row_buffer: RowType = []
                 for x in range(0, screen_width):
-                    row_buffer.append(
-                        smooth_camera.get_pixel((x - half_width) / 2, y - half_height)
-                    )
+                    row_buffer.append(smooth_camera.get_pixel(x, y))
                 frame_buffer.insert(0, row_buffer)
-            # Camera info
-            for camera_info in smooth_camera.info:
-                row_buffer: RowType = []
-                for character in camera_info.ljust(screen_width)[:screen_width]:
-                    row_buffer.append((255, 255, 255, 255, ord(character)))
-                frame_buffer.append(row_buffer)
 
             yield frame_buffer
