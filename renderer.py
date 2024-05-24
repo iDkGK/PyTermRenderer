@@ -51,7 +51,7 @@ class _Renderer(object):
     _gray_buffer = None
     _rgba_buffer = None
     _fps_counters: list[float] = []
-    _time_counter = time.perf_counter()
+    _time_counter = time.perf_counter_ns()
 
     @classmethod
     def __display_average_fps__(cls) -> None:
@@ -178,10 +178,14 @@ class _Renderer(object):
         cls._frame_buffer = frame
         print(end="".join(frame_buffer))
         time.sleep(
-            max(0, 1 / (fps or math.inf) + cls._time_counter - time.perf_counter())
+            max(
+                0,
+                1 / (fps or math.inf)
+                - (time.perf_counter_ns() - cls._time_counter) / 1e9,
+            )
         )
-        cls._fps_counters.append(1 / (time.perf_counter() - cls._time_counter))
-        cls._time_counter = time.perf_counter()
+        cls._fps_counters.append(1e9 / (time.perf_counter_ns() - cls._time_counter))
+        cls._time_counter = time.perf_counter_ns()
         print(end="\x1b];%.1f fps\a" % cls._fps_counters[-1], flush=True)
 
     @staticmethod
