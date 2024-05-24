@@ -1,135 +1,65 @@
 import math
 from pathlib import Path
 
-from hintings import MatrixType, Point3DType, RotationType, VertexType, TriangleType
-
-
-def matrix_transpose(matrix: MatrixType) -> MatrixType:
-    return list(map(list, zip(*matrix)))
-
-
-def matrix_add(*matrices: MatrixType) -> MatrixType:
-    matrices_iterator = iter(matrices)
-    first_matrix = next(matrices_iterator)
-    # deep copy to avoid modification of first matrix
-    result_matrix: MatrixType = [
-        first_matrix_row[:] for first_matrix_row in first_matrix
-    ]
-    # continuously addition
-    for other_matrix in matrices_iterator:
-        for row_index, (result_matrix_row, other_matrix_row) in enumerate(
-            zip(result_matrix, other_matrix)
-        ):
-            for element_index in range(0, len(result_matrix_row)):
-                result_matrix[row_index][element_index] = (  # type: ignore
-                    result_matrix_row[element_index] + other_matrix_row[element_index]
-                )
-    return result_matrix
-
-
-def matrix_subtract(*matrices: MatrixType) -> MatrixType:
-    matrices_iterator = iter(matrices)
-    first_matrix = next(matrices_iterator)
-    # deep copy to avoid modification of first matrix
-    result_matrix: MatrixType = [
-        first_matrix_row[:] for first_matrix_row in first_matrix
-    ]
-    # continuously subtraction
-    for other_matrix in matrices_iterator:
-        for row_index, (result_matrix_row, other_matrix_row) in enumerate(
-            zip(result_matrix, other_matrix)
-        ):
-            for element_index in range(0, len(result_matrix_row)):
-                result_matrix[row_index][element_index] = (  # type: ignore
-                    result_matrix_row[element_index] - other_matrix_row[element_index]
-                )
-    return result_matrix
-
-
-def matrix_multiply(*matrices: MatrixType) -> MatrixType:
-    matrices_iterator = iter(matrices)
-    first_matrix = next(matrices_iterator)
-    # deep copy to avoid modification of first matrix
-    result_matrix: MatrixType = [
-        first_matrix_row[:] for first_matrix_row in first_matrix
-    ]
-    # continuously multiplication
-    for other_matrix in matrices_iterator:
-        other_matrix = matrix_transpose(other_matrix)
-        result_matrix = [
-            [
-                sum(
-                    result_matrix_element * other_matrix_element
-                    for result_matrix_element, other_matrix_element in zip(row, column)
-                )
-                for column in other_matrix
-            ]
-            for row in result_matrix
-        ]
-    return result_matrix
-
-
-class Vector(object):
-    def __init__(self, x: float, y: float) -> None:
-        self._x = x
-        self._y = y
-
-    def __matmul__(self, other: "Vector") -> float:
-        return self._x * other._x + self._y * other._y
-
-    def __rmatmul__(self, other: "Vector") -> float:
-        return other._x * self._x + other._y * self._y
+from hintings import Point3DType, RotationType, VertexType, TriangleType
 
 
 class Triangle(object):
     def __init__(
         self,
-        null: bool = False,
-        vertex_a: tuple[float, float] = (0.0, 0.0),
-        vertex_b: tuple[float, float] = (0.0, 0.0),
-        vertex_c: tuple[float, float] = (0.0, 0.0),
+        vertex_a: tuple[int, int],
+        vertex_b: tuple[int, int],
+        vertex_c: tuple[int, int],
     ) -> None:
-        self._null = null
-        self._x_a, self._y_a = vertex_a
-        x_b, y_b = vertex_b
-        x_c, y_c = vertex_c
-        self._v_ab = Vector(x_b - self._x_a, y_b - self._y_a)
-        self._v_ac = Vector(x_c - self._x_a, y_c - self._y_a)
-        self._p_ab_ab = self._v_ab @ self._v_ab
-        self._p_ac_ac = self._v_ac @ self._v_ac
-        self._p_ab_ac = self._v_ab @ self._v_ac
-        self._p_ac_ab = self._v_ac @ self._v_ab
-        self._d_ab_ab_ac_ac_ac_ab_ac_ab = (
-            self._p_ab_ab * self._p_ac_ac - self._p_ac_ab * self._p_ac_ab
+        # Counterclock reorder
+        vertex_a, vertex_b, vertex_c = sorted(
+            (vertex_a, vertex_b, vertex_c),
+            key=lambda tuple_xy: tuple_xy[1],
+            reverse=True,
         )
-
-    def __contains__(self, point: tuple[float, float]) -> bool:
-        if self._null:
-            return False
-        x_p, y_p = point
-        v_ap = Vector(x_p - self._x_a, y_p - self._y_a)
-        p_ap_ab, p_ap_ac = v_ap @ self._v_ab, v_ap @ self._v_ac
-        d_ap_ab_ac_ac_ap_ac_ab_ac = p_ap_ab * self._p_ac_ac - p_ap_ac * self._p_ab_ac
-        if d_ap_ab_ac_ac_ap_ac_ab_ac < 0.0:
-            return False
-        d_ap_ac_ab_ab_ap_ab_ac_ab = p_ap_ac * self._p_ab_ab - p_ap_ab * self._p_ac_ab
-        if d_ap_ac_ab_ab_ap_ab_ac_ab < 0.0:
-            return False
-        if (
-            d_ap_ab_ac_ac_ap_ac_ab_ac
-            + d_ap_ac_ab_ab_ap_ab_ac_ab
-            - self._d_ab_ab_ac_ac_ac_ab_ac_ab
-            > 0.0
+        if vertex_b[1] == vertex_a[1] and vertex_b[0] > vertex_a[0]:
+            vertex_a, vertex_b = vertex_b, vertex_a
+        else:
+            vertex_b, vertex_c = sorted(
+                (vertex_b, vertex_c),
+                key=lambda tuple_xy: tuple_xy[0],
+            )
+        # Bresenham line algorithm
+        self._coordinates: set[tuple[int, int]] = set()
+        for (x0, y0), (x1, y1) in (
+            (vertex_a, vertex_b),
+            (vertex_b, vertex_c),
+            (vertex_c, vertex_a),
         ):
-            return False
-        return True
+            delta_x = abs(x1 - x0)
+            delta_y = abs(y1 - y0)
+            step_x = 1 if x0 < x1 else -1
+            step_y = 1 if y0 < y1 else -1
+            error = delta_x - delta_y
+            while True:
+                self._coordinates.add((x0, y0))
+                if x0 == x1 and y0 == y1:
+                    break
+                double_error = 2 * error
+                if double_error > -delta_y:
+                    error -= delta_y
+                    x0 += step_x
+                if double_error < delta_x:
+                    error += delta_x
+                    y0 += step_y
+
+    def __contains__(self, coordinate: tuple[int, int]) -> bool:
+        return coordinate in self._coordinates
+
+    def get_pixel(self, x: int, y: int) -> tuple[int, ...]:
+        return (255, 255, 255, 255, ord("█"))
 
 
 class Object(object):
     def __init__(self, filepath: str) -> None:
         self._filepath = Path(filepath)
         self._name = ""
-        self._triangle_vertices: list[TriangleType] = []
+        self._triangle_vertices: set[TriangleType] = set()
         # Parse file data and retrieve triangles vertices
         vertices: list[VertexType] = []
         normals: list[tuple[float, float, float]] = []
@@ -169,19 +99,13 @@ class Object(object):
                 faces.append(tuple(face))
         for face in faces:
             index_a, index_b, index_c, *_ = face
-            vertex = (
-                vertices[index_a],
-                vertices[index_b],
-                vertices[index_c],
-            )
-            if vertex not in self._triangle_vertices:
-                self._triangle_vertices.append(
-                    (
-                        vertices[index_a],
-                        vertices[index_b],
-                        vertices[index_c],
-                    )
+            self._triangle_vertices.add(
+                (
+                    vertices[index_a],
+                    vertices[index_b],
+                    vertices[index_c],
                 )
+            )
 
     # Properties
     @property
@@ -189,7 +113,7 @@ class Object(object):
         return self._name
 
     @property
-    def triangle_vertices(self) -> list[TriangleType]:
+    def triangle_vertices(self) -> set[TriangleType]:
         return self._triangle_vertices
 
     # Update methods
@@ -204,7 +128,7 @@ class Object(object):
         camera.hide_object(self)
 
 
-class ScreenTooSmallError(Exception):
+class CameraScreenTooSmallError(Exception):
     pass
 
 
@@ -220,16 +144,18 @@ class Camera(object):
         dash_speed: float = 1.0,
     ) -> None:
         self._fov = fov
-        self._screen_width, self._screen_height = view
-        self._screen_width = (self._screen_width // 2) * 2 or 2
+        self._camera_width, self._camera_height = view
+        self._camera_width = (self._camera_width // 2) * 2 or 2
         self._half_width, self._half_height = (
-            self._screen_width / 2,
-            self._screen_height / 2,
+            self._camera_width // 2,
+            self._camera_height // 2,
         )
-        if self._screen_height < 0:
-            raise ScreenTooSmallError("screen is too small to render objects.")
+        if self._camera_height < 0:
+            raise CameraScreenTooSmallError(
+                "camera screen is too small to render objects."
+            )
         self._focal = (
-            max(self._screen_width, self._screen_height)
+            max(self._camera_width, self._camera_height)
             / math.tan(math.radians(fov / 2.0))
             / 2
         )
@@ -239,8 +165,8 @@ class Camera(object):
         self._original_rotation = rotation
         self._move_speed = abs(move_speed)
         self._dash_speed = abs(dash_speed)
-        self._objects: list[Object] = []
-        self._triangles: list[Triangle] = []
+        self._objects: set[Object] = set()
+        self._triangles: set[Triangle] = set()
         self._information: list[str] = []
 
     # Move methods
@@ -345,140 +271,97 @@ class Camera(object):
                 ) = triangle_vertices
                 # Position
                 # Using vector for relative position
-                (
-                    distance_camera_triangle_a_x,
-                    distance_camera_triangle_a_y,
-                    distance_camera_triangle_a_z,
-                ) = (
+                (triangle_a_x, triangle_a_y, triangle_a_z) = (
                     triangle_a_x - self._x,
                     triangle_a_y - self._y,
                     triangle_a_z - self._z,
                 )
-                (
-                    distance_camera_triangle_b_x,
-                    distance_camera_triangle_b_y,
-                    distance_camera_triangle_b_z,
-                ) = (
+                (triangle_b_x, triangle_b_y, triangle_b_z) = (
                     triangle_b_x - self._x,
                     triangle_b_y - self._y,
                     triangle_b_z - self._z,
                 )
-                (
-                    distance_camera_triangle_c_x,
-                    distance_camera_triangle_c_y,
-                    distance_camera_triangle_c_z,
-                ) = (
+                (triangle_c_x, triangle_c_y, triangle_c_z) = (
                     triangle_c_x - self._x,
                     triangle_c_y - self._y,
                     triangle_c_z - self._z,
                 )
                 # Rotation
                 # Z-axis rotation that affects X/Y coordinates
-                distance_camera_triangle_a_x, distance_camera_triangle_a_y = (
-                    distance_camera_triangle_a_x * self._cos_roll
-                    + distance_camera_triangle_a_y * self._sin_roll,
-                    -distance_camera_triangle_a_x * self._sin_roll
-                    + distance_camera_triangle_a_y * self._cos_roll,
+                triangle_a_x, triangle_a_y = (
+                    triangle_a_x * self._cos_roll + triangle_a_y * self._sin_roll,
+                    -triangle_a_x * self._sin_roll + triangle_a_y * self._cos_roll,
                 )
-                distance_camera_triangle_b_x, distance_camera_triangle_b_y = (
-                    distance_camera_triangle_b_x * self._cos_roll
-                    + distance_camera_triangle_b_y * self._sin_roll,
-                    -distance_camera_triangle_b_x * self._sin_roll
-                    + distance_camera_triangle_b_y * self._cos_roll,
+                triangle_b_x, triangle_b_y = (
+                    triangle_b_x * self._cos_roll + triangle_b_y * self._sin_roll,
+                    -triangle_b_x * self._sin_roll + triangle_b_y * self._cos_roll,
                 )
-                distance_camera_triangle_c_x, distance_camera_triangle_c_y = (
-                    distance_camera_triangle_c_x * self._cos_roll
-                    + distance_camera_triangle_c_y * self._sin_roll,
-                    -distance_camera_triangle_c_x * self._sin_roll
-                    + distance_camera_triangle_c_y * self._cos_roll,
+                triangle_c_x, triangle_c_y = (
+                    triangle_c_x * self._cos_roll + triangle_c_y * self._sin_roll,
+                    -triangle_c_x * self._sin_roll + triangle_c_y * self._cos_roll,
                 )
                 # Y-axis rotation that affects X/Z coordinates
-                distance_camera_triangle_a_x, distance_camera_triangle_a_z = (
-                    distance_camera_triangle_a_x * self._cos_pitch
-                    - distance_camera_triangle_a_z * self._sin_pitch,
-                    distance_camera_triangle_a_x * self._sin_pitch
-                    + distance_camera_triangle_a_z * self._cos_pitch,
+                triangle_a_x, triangle_a_z = (
+                    triangle_a_x * self._cos_pitch - triangle_a_z * self._sin_pitch,
+                    triangle_a_x * self._sin_pitch + triangle_a_z * self._cos_pitch,
                 )
-                distance_camera_triangle_b_x, distance_camera_triangle_b_z = (
-                    distance_camera_triangle_b_x * self._cos_pitch
-                    - distance_camera_triangle_b_z * self._sin_pitch,
-                    distance_camera_triangle_b_x * self._sin_pitch
-                    + distance_camera_triangle_b_z * self._cos_pitch,
+                triangle_b_x, triangle_b_z = (
+                    triangle_b_x * self._cos_pitch - triangle_b_z * self._sin_pitch,
+                    triangle_b_x * self._sin_pitch + triangle_b_z * self._cos_pitch,
                 )
-                distance_camera_triangle_c_x, distance_camera_triangle_c_z = (
-                    distance_camera_triangle_c_x * self._cos_pitch
-                    - distance_camera_triangle_c_z * self._sin_pitch,
-                    distance_camera_triangle_c_x * self._sin_pitch
-                    + distance_camera_triangle_c_z * self._cos_pitch,
+                triangle_c_x, triangle_c_z = (
+                    triangle_c_x * self._cos_pitch - triangle_c_z * self._sin_pitch,
+                    triangle_c_x * self._sin_pitch + triangle_c_z * self._cos_pitch,
                 )
                 # X-axis rotation that affects Y/Z coordinates
-                distance_camera_triangle_a_y, distance_camera_triangle_a_z = (
-                    distance_camera_triangle_a_y * self._cos_yaw
-                    + distance_camera_triangle_a_z * self._sin_yaw,
-                    -distance_camera_triangle_a_y * self._sin_yaw
-                    + distance_camera_triangle_a_z * self._cos_yaw,
+                triangle_a_y, triangle_a_z = (
+                    triangle_a_y * self._cos_yaw + triangle_a_z * self._sin_yaw,
+                    -triangle_a_y * self._sin_yaw + triangle_a_z * self._cos_yaw,
                 )
-                distance_camera_triangle_b_y, distance_camera_triangle_b_z = (
-                    distance_camera_triangle_b_y * self._cos_yaw
-                    + distance_camera_triangle_b_z * self._sin_yaw,
-                    -distance_camera_triangle_b_y * self._sin_yaw
-                    + distance_camera_triangle_b_z * self._cos_yaw,
+                triangle_b_y, triangle_b_z = (
+                    triangle_b_y * self._cos_yaw + triangle_b_z * self._sin_yaw,
+                    -triangle_b_y * self._sin_yaw + triangle_b_z * self._cos_yaw,
                 )
-                distance_camera_triangle_c_y, distance_camera_triangle_c_z = (
-                    distance_camera_triangle_c_y * self._cos_yaw
-                    + distance_camera_triangle_c_z * self._sin_yaw,
-                    -distance_camera_triangle_c_y * self._sin_yaw
-                    + distance_camera_triangle_c_z * self._cos_yaw,
+                triangle_c_y, triangle_c_z = (
+                    triangle_c_y * self._cos_yaw + triangle_c_z * self._sin_yaw,
+                    -triangle_c_y * self._sin_yaw + triangle_c_z * self._cos_yaw,
                 )
-                # Simple culling. TODO: advanced culling mechanism.
-                if (
-                    distance_camera_triangle_a_z > 0.0
-                    and distance_camera_triangle_b_z > 0.0
-                    and distance_camera_triangle_c_z > 0.0
-                ):
-                    self._triangles.append(
-                        Triangle(
-                            vertex_a=(
-                                self._focal
-                                * distance_camera_triangle_a_x
-                                / distance_camera_triangle_a_z,
-                                self._focal
-                                * distance_camera_triangle_a_y
-                                / distance_camera_triangle_a_z,
-                            ),
-                            vertex_b=(
-                                self._focal
-                                * distance_camera_triangle_b_x
-                                / distance_camera_triangle_b_z,
-                                self._focal
-                                * distance_camera_triangle_b_y
-                                / distance_camera_triangle_b_z,
-                            ),
-                            vertex_c=(
-                                self._focal
-                                * distance_camera_triangle_c_x
-                                / distance_camera_triangle_c_z,
-                                self._focal
-                                * distance_camera_triangle_c_y
-                                / distance_camera_triangle_c_z,
-                            ),
-                        )
+                # Triangle vertices on camera screen
+                camera_triangle_vertex_a = (
+                    int(self._focal * triangle_a_x / triangle_a_z),
+                    int(self._focal * triangle_a_y / triangle_a_z),
+                )
+                camera_triangle_vertex_b = (
+                    int(self._focal * triangle_b_x / triangle_b_z),
+                    int(self._focal * triangle_b_y / triangle_b_z),
+                )
+                camera_triangle_vertex_c = (
+                    int(self._focal * triangle_c_x / triangle_c_z),
+                    int(self._focal * triangle_c_y / triangle_c_z),
+                )
+                # Triangle on camera screen
+                self._triangles.add(
+                    Triangle(
+                        vertex_a=camera_triangle_vertex_a,
+                        vertex_b=camera_triangle_vertex_b,
+                        vertex_c=camera_triangle_vertex_c,
                     )
+                )
 
     def _update_infomation(self) -> None:
         self._information = [
-            ("FOV: %f" % self._fov).ljust(self._screen_width),
+            ("FOV: %f" % self._fov).ljust(self._camera_width),
             ("Coordinate (X, Y, Z): (%f, %f, %f)" % (self._x, self._y, self._z)).ljust(
-                self._screen_width
+                self._camera_width
             ),
             (
                 "Rotation (Yaw, Pitch, Roll): (%f, %f, %f)"
                 % (self._yaw, self._pitch, self._roll)
-            ).ljust(self._screen_width),
+            ).ljust(self._camera_width),
             (
                 "Direction vector (X, Y, Z): (%f, %f, %f)"
                 % (self._vector_x, self._vector_y, self._vector_z)
-            ).ljust(self._screen_width),
+            ).ljust(self._camera_width),
         ]
         self._information.reverse()
 
@@ -490,16 +373,16 @@ class Camera(object):
             and self._information[y:][0][x:][0] != " "
         ):
             return (255, 255, 255, 255, ord(self._information[y:][0][x:][0]))
-        coordinate = ((x - self._half_width) / 2, y - self._half_height)
+        camera_x, camera_y = (x - self._half_width) // 2, y - self._half_height
         for triangle in self._triangles:
-            if coordinate in triangle:
-                return (255, 255, 255, 255, ord("█"))
+            if (camera_x, camera_y) in triangle:
+                return triangle.get_pixel(camera_x, camera_y)
         return (255, 255, 255, 255, ord(" "))
 
     # Objects-related methods
     def show_object(self, obj: Object) -> None:
         if obj not in self._objects:
-            self._objects.append(obj)
+            self._objects.add(obj)
 
     def hide_object(self, obj: Object) -> None:
         if obj in self._objects:
