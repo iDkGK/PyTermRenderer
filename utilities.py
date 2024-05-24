@@ -128,13 +128,13 @@ class Object(object):
     def __init__(self, filepath: str) -> None:
         self._filepath = Path(filepath)
         self._name = ""
-        self._triangle_vertices: list[
+        self._triangle_vertices: set[
             tuple[
                 tuple[float, float, float],
                 tuple[float, float, float],
                 tuple[float, float, float],
             ]
-        ] = []
+        ] = set()
         # Parse file data and retrieve triangles vertices
         vertices: list[tuple[float, float, float]] = []
         normals: list[tuple[float, float, float]] = []
@@ -174,7 +174,7 @@ class Object(object):
                 faces.append(tuple(face))
         for face in faces:
             index_a, index_b, index_c, *_ = face
-            self._triangle_vertices.append(
+            self._triangle_vertices.add(
                 (
                     vertices[index_a],
                     vertices[index_b],
@@ -188,7 +188,7 @@ class Object(object):
         return self._name
 
     @property
-    def triangle_vertices(self) -> list[
+    def triangle_vertices(self) -> set[
         tuple[
             tuple[float, float, float],
             tuple[float, float, float],
@@ -200,6 +200,13 @@ class Object(object):
     # Update methods
     def update(self, delta_time: float = 0.0) -> None:
         pass
+
+    # Camera-related methods
+    def show_to(self, camera: "Camera") -> None:
+        camera.show_object(self)
+
+    def hide_from(self, camera: "Camera") -> None:
+        camera.hide_object(self)
 
 
 class ScreenTooSmallError(Exception):
@@ -231,7 +238,7 @@ class Camera(object):
         self._original_rotation = rotation
         self._move_speed = abs(move_speed)
         self._dash_speed = abs(dash_speed)
-        self._objects: list[Object] = []
+        self._objects: set[Object] = set()
         self._triangles: list[Triangle] = []
 
     # Properties
@@ -333,7 +340,7 @@ class Camera(object):
         self._vector_y = 0.0  # Y component
         self._vector_z = self._cos_pitch  # Z component
 
-    def _update_objects(self):
+    def _update_objects(self) -> None:
         # Triangles
         self._triangles.clear()
         # Iteration over all triangles
@@ -475,8 +482,11 @@ class Camera(object):
         return (255, 255, 255, 255, ord(" "))
 
     # Objects-related methods
-    def add_object(self, obj: Object):
-        self._objects.append(obj)
+    def show_object(self, obj: Object) -> None:
+        self._objects.add(obj)
+
+    def hide_object(self, obj: Object) -> None:
+        self._objects.remove(obj)
 
 
 class SmoothCamera(Camera):

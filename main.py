@@ -22,32 +22,32 @@ class InvalidLockStatusError(Exception):
     pass
 
 
-def play_code_rain_animation(fps: int = 15):
+def play_code_rain_animation(fps: int = 15) -> None:
     code_rain = TheMatrixCodeRain(mode="long")
     for frame in code_rain.frames:
         render_frame(frame, fps=fps)
 
 
-def play_digital_clock_animation(fps: int = 10):
+def play_digital_clock_animation(fps: int = 10) -> None:
     time_clock = DigitalTimeUnit()
     for frame in time_clock.frames:
         render_frame(frame, fps=fps)
 
 
-def play_fake_3d_scene_game(fps: int = 60):
+def play_fake_3d_scene_game(fps: int = 60) -> None:
     scene_game = Fake3DSceneGame()
     for frame in scene_game.frames:
         render_frame(frame, fps=fps)
 
 
-def display_static_png_image(fps: int = 0):
+def display_static_png_image(fps: int = 0) -> None:
     example_png = PNG("resource/example.png").decode()
     render_ascii(example_png.image_data, fps)
     render_gray(example_png.image_data, fps)
     render_rgba(example_png.image_data, fps)
 
 
-def play_dynamic_png_images_ascii(fps: int = 0):
+def play_dynamic_png_images_ascii(fps: int = 0) -> None:
 
     holder_lock = Lock()
     renderer_lock = Lock()

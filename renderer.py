@@ -76,7 +76,7 @@ class _Renderer(object):
         )
 
     @classmethod
-    def render(cls, frame: FrameType, fps: int, mode: RenderModeType):
+    def render(cls, frame: FrameType, fps: int, mode: RenderModeType) -> None:
         if not frame:
             return
         terminal_width, terminal_height = os.get_terminal_size()
@@ -189,7 +189,7 @@ class _Renderer(object):
         print(end="\x1b];%.1f fps\a" % cls._fps_counters[-1], flush=True)
 
     @staticmethod
-    def clear(mode: int):
+    def clear(mode: int) -> None:
         print(end="\x1b[%sJ" % mode, flush=True)
 
 

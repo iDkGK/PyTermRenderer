@@ -255,18 +255,18 @@ class Fake3DSceneGame(Backend):
     def frames(self) -> FramesType:
         # Create objects
         cube_object = Object("resource/models/crafting_table.obj")
-        player_camera = SmoothCamera(
+        smooth_camera = SmoothCamera(
             fov=90,
             view=os.get_terminal_size(),
             coordinate=(0.0, 0.0, 0.0),
             rotation=(0.0, 0.0, 0.0),
         )
-        player_camera.add_object(cube_object)
+        smooth_camera.show_object(cube_object)
         # Update once
         cube_object.update()
-        player_camera.update()
+        smooth_camera.update()
         # Other Variables
-        camera_info_length = len(player_camera.info)
+        camera_info_length = len(smooth_camera.info)
         perf_counter = time.perf_counter_ns()
         while True:
             screen_width, screen_height = os.get_terminal_size()
@@ -278,7 +278,7 @@ class Fake3DSceneGame(Backend):
             delta_time = (time.perf_counter_ns() - perf_counter) / 1e9
             perf_counter = time.perf_counter_ns()
             cube_object.update(delta_time)
-            player_camera.update(delta_time)
+            smooth_camera.update(delta_time)
 
             # Camera controlling
             # With third-party modules
@@ -286,37 +286,37 @@ class Fake3DSceneGame(Backend):
             if self._keyboard is not None:
                 # Forward
                 if self._keyboard.is_pressed("shift+w"):
-                    player_camera.dash_forward()
+                    smooth_camera.dash_forward()
                 elif self._keyboard.is_pressed("w"):
-                    player_camera.move_forward()
+                    smooth_camera.move_forward()
                 # Backward
                 if self._keyboard.is_pressed("shift+s"):
-                    player_camera.dash_backward()
+                    smooth_camera.dash_backward()
                 elif self._keyboard.is_pressed("s"):
-                    player_camera.move_backward()
+                    smooth_camera.move_backward()
                 # Leftward
                 if self._keyboard.is_pressed("shift+a"):
-                    player_camera.dash_leftward()
+                    smooth_camera.dash_leftward()
                 elif self._keyboard.is_pressed("a"):
-                    player_camera.move_leftward()
+                    smooth_camera.move_leftward()
                 # Rightward
                 if self._keyboard.is_pressed("shift+d"):
-                    player_camera.dash_rightward()
+                    smooth_camera.dash_rightward()
                 elif self._keyboard.is_pressed("d"):
-                    player_camera.move_rightward()
+                    smooth_camera.move_rightward()
                 # Upward
                 if self._keyboard.is_pressed("shift+space"):
-                    player_camera.dash_upward()
+                    smooth_camera.dash_upward()
                 elif self._keyboard.is_pressed("space"):
-                    player_camera.move_upward()
+                    smooth_camera.move_upward()
                 # Downward
                 if self._keyboard.is_pressed("ctrl+shift"):
-                    player_camera.dash_downward()
+                    smooth_camera.dash_downward()
                 elif self._keyboard.is_pressed("ctrl"):
-                    player_camera.move_downward()
+                    smooth_camera.move_downward()
                 # Reset
                 if self._keyboard.is_pressed("r"):
-                    player_camera.reset()
+                    smooth_camera.reset()
                 # Exit
                 if self._keyboard.is_pressed("escape"):
                     sys.exit(0)
@@ -326,7 +326,7 @@ class Fake3DSceneGame(Backend):
                 mouse_x, mouse_y = self._mouse.get_position()
                 if mouse_x != 960 or mouse_y != 540:
                     self._mouse.move(960, 540)  # type: ignore
-                    player_camera.rotate(
+                    smooth_camera.rotate(
                         yaw=-(mouse_y - 540) / 18,
                         pitch=+(mouse_x - 960) / 18,
                     )
@@ -337,33 +337,33 @@ class Fake3DSceneGame(Backend):
                 if self._keyboard is None:
                     # Forward
                     if key == "W":
-                        player_camera.dash_forward()
+                        smooth_camera.dash_forward()
                     elif key == "w":
-                        player_camera.move_forward()
+                        smooth_camera.move_forward()
                     # Backward
                     elif key == "S":
-                        player_camera.dash_backward()
+                        smooth_camera.dash_backward()
                     elif key == "s":
-                        player_camera.move_backward()
+                        smooth_camera.move_backward()
                     # Leftward
                     elif key == "A":
-                        player_camera.dash_leftward()
+                        smooth_camera.dash_leftward()
                     elif key == "a":
-                        player_camera.move_leftward()
+                        smooth_camera.move_leftward()
                     # Rightward
                     elif key == "D":
-                        player_camera.dash_rightward()
+                        smooth_camera.dash_rightward()
                     elif key == "d":
-                        player_camera.move_rightward()
+                        smooth_camera.move_rightward()
                     # Upward
                     elif key == " ":
-                        player_camera.move_upward()
+                        smooth_camera.move_upward()
                     # Downward
                     elif key == "\r":
-                        player_camera.move_downward()
+                        smooth_camera.move_downward()
                     # Reset
                     elif key == "r":
-                        player_camera.reset()
+                        smooth_camera.reset()
                     # Exit
                     elif key == "\x1b":
                         self._keyboard_listener.stop()
@@ -372,19 +372,19 @@ class Fake3DSceneGame(Backend):
                 if self._mouse is None:
                     # Yaw
                     if key == "8":
-                        player_camera.rotate(yaw=+1.0, pitch=0.0, roll=0.0)
+                        smooth_camera.rotate(yaw=+1.0, pitch=0.0, roll=0.0)
                     elif key == "2":
-                        player_camera.rotate(yaw=-1.0, pitch=0.0, roll=0.0)
+                        smooth_camera.rotate(yaw=-1.0, pitch=0.0, roll=0.0)
                     # Pitch
                     elif key == "4":
-                        player_camera.rotate(yaw=0.0, pitch=-1.0, roll=0.0)
+                        smooth_camera.rotate(yaw=0.0, pitch=-1.0, roll=0.0)
                     elif key == "6":
-                        player_camera.rotate(yaw=0.0, pitch=+1.0, roll=0.0)
+                        smooth_camera.rotate(yaw=0.0, pitch=+1.0, roll=0.0)
                     # Roll
                     elif key == "e":
-                        player_camera.rotate(yaw=0.0, pitch=0.0, roll=+1.0)
+                        smooth_camera.rotate(yaw=0.0, pitch=0.0, roll=+1.0)
                     elif key == "q":
-                        player_camera.rotate(yaw=0.0, pitch=0.0, roll=-1.0)
+                        smooth_camera.rotate(yaw=0.0, pitch=0.0, roll=-1.0)
 
             # Frame generation
             # Camera view
@@ -393,11 +393,11 @@ class Fake3DSceneGame(Backend):
                 row_buffer: RowType = []
                 for x in range(0, screen_width):
                     row_buffer.append(
-                        player_camera.get_pixel((x - half_width) / 2, y - half_height)
+                        smooth_camera.get_pixel((x - half_width) / 2, y - half_height)
                     )
                 frame_buffer.insert(0, row_buffer)
             # Camera info
-            for camera_info in player_camera.info:
+            for camera_info in smooth_camera.info:
                 row_buffer: RowType = []
                 for character in camera_info.ljust(screen_width)[:screen_width]:
                     row_buffer.append((255, 255, 255, 255, ord(character)))
