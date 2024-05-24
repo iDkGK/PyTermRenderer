@@ -10,6 +10,10 @@ RowType = list[tuple[int, ...]]
 FrameType = list[RowType]
 FramesType = Iterable[FrameType]
 MatrixType = list[list[int | float]] | list[list[int] | list[float]]
+Point3DType = tuple[float, float, float]
+RotationType = tuple[float, float, float]
+VertexType = tuple[float, float, float]
+TriangleType = tuple[VertexType, VertexType, VertexType]
 
 # Others
 EffectModeType = Literal["ascii", "binary", "short", "standard", "long"]

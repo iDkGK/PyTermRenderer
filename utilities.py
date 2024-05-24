@@ -1,6 +1,6 @@
 import math
 from pathlib import Path
-from hintings import MatrixType
+from hintings import MatrixType, Point3DType, RotationType, VertexType, TriangleType
 
 
 def matrix_transpose(matrix: MatrixType) -> MatrixType:
@@ -128,15 +128,9 @@ class Object(object):
     def __init__(self, filepath: str) -> None:
         self._filepath = Path(filepath)
         self._name = ""
-        self._triangle_vertices: set[
-            tuple[
-                tuple[float, float, float],
-                tuple[float, float, float],
-                tuple[float, float, float],
-            ]
-        ] = set()
+        self._triangle_vertices: list[TriangleType] = []
         # Parse file data and retrieve triangles vertices
-        vertices: list[tuple[float, float, float]] = []
+        vertices: list[VertexType] = []
         normals: list[tuple[float, float, float]] = []
         textures: list[tuple[float, ...]] = []
         faces: list[tuple[int, ...]] = []
@@ -174,13 +168,19 @@ class Object(object):
                 faces.append(tuple(face))
         for face in faces:
             index_a, index_b, index_c, *_ = face
-            self._triangle_vertices.add(
-                (
-                    vertices[index_a],
-                    vertices[index_b],
-                    vertices[index_c],
-                )
+            vertex = (
+                vertices[index_a],
+                vertices[index_b],
+                vertices[index_c],
             )
+            if vertex not in self._triangle_vertices:
+                self._triangle_vertices.append(
+                    (
+                        vertices[index_a],
+                        vertices[index_b],
+                        vertices[index_c],
+                    )
+                )
 
     # Properties
     @property
@@ -188,13 +188,7 @@ class Object(object):
         return self._name
 
     @property
-    def triangle_vertices(self) -> set[
-        tuple[
-            tuple[float, float, float],
-            tuple[float, float, float],
-            tuple[float, float, float],
-        ]
-    ]:
+    def triangle_vertices(self) -> list[TriangleType]:
         return self._triangle_vertices
 
     # Update methods
@@ -219,8 +213,8 @@ class Camera(object):
         *,
         fov: float,
         view: tuple[int, int],
-        coordinate: tuple[float, float, float],
-        rotation: tuple[float, float, float],
+        coordinate: Point3DType,
+        rotation: RotationType,
         move_speed: float = 0.5,
         dash_speed: float = 1.0,
     ) -> None:
@@ -244,7 +238,7 @@ class Camera(object):
         self._original_rotation = rotation
         self._move_speed = abs(move_speed)
         self._dash_speed = abs(dash_speed)
-        self._objects: set[Object] = set()
+        self._objects: list[Object] = []
         self._triangles: list[Triangle] = []
         self._information: list[str] = []
 
@@ -503,10 +497,12 @@ class Camera(object):
 
     # Objects-related methods
     def show_object(self, obj: Object) -> None:
-        self._objects.add(obj)
+        if obj not in self._objects:
+            self._objects.append(obj)
 
     def hide_object(self, obj: Object) -> None:
-        self._objects.remove(obj)
+        if obj in self._objects:
+            self._objects.remove(obj)
 
 
 class SmoothCamera(Camera):
@@ -515,8 +511,8 @@ class SmoothCamera(Camera):
         *,
         fov: float,
         view: tuple[int, int],
-        coordinate: tuple[float, float, float],
-        rotation: tuple[float, float, float],
+        coordinate: Point3DType,
+        rotation: RotationType,
         move_speed: float = 0.5,
         dash_speed: float = 1.0,
         inertia_ratio: float = 0.5,
@@ -668,8 +664,8 @@ class PlayerCamera(SmoothCamera):
         *,
         fov: float,
         view: tuple[int, int],
-        coordinate: tuple[float, float, float],
-        rotation: tuple[float, float, float],
+        coordinate: Point3DType,
+        rotation: RotationType,
         move_speed: float = 0.5,
         dash_speed: float = 1.0,
         inertia_ratio: float = 0.5,
