@@ -3,6 +3,7 @@ import atexit
 import math
 import os
 import time
+from collections import deque
 
 from hintings import FrameType, RenderModeType
 
@@ -50,7 +51,7 @@ class _Renderer(object):
     _ascii_buffer = None
     _gray_buffer = None
     _rgba_buffer = None
-    _fps_counters: list[float] = []
+    _fps_counters: deque[float] = deque(maxlen=30)
     _time_counter = time.perf_counter_ns()
 
     @classmethod
