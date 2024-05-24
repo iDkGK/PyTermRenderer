@@ -136,32 +136,51 @@ class Object(object):
             ]
         ] = []
         # Parse file data and retrieve triangles vertices
-        vertex_coordinates: list[tuple[float, float, float]] = []
-        normal_vectors: list[tuple[float, float, float]] = []
+        vertices: list[tuple[float, float, float]] = []
+        normals: list[tuple[float, float, float]] = []
+        textures: list[tuple[float, ...]] = []
+        faces: list[tuple[int, ...]] = []
         for line in self._filepath.read_text().strip().splitlines():
             data_type, *data = line.strip().split()
             if data_type == "o":
                 self._name = " ".join(data)
             elif data_type == "v":
-                x, y, z, *_ = tuple(map(float, data))
-                vertex_coordinates.append((x, y, z))
+                x, y, z, *_ = map(float, data)
+                vertices.append((x, y, z))
             elif data_type == "vn":
-                x, y, z, *_ = tuple(map(float, data))
-                normal_vectors.append((x, y, z))
+                x, y, z, *_ = map(float, data)
+                normals.append((x, y, z))
             elif data_type == "vt":
-                pass
+                u, *vw = map(float, data)
+                if len(vw) == 2:
+                    v, w = vw
+                    textures.append((u, v, w))
+                elif len(vw) == 1:
+                    (v,) = vw
+                    textures.append((u, v))
+                elif len(vw) == 0:
+                    textures.append((u,))
             elif data_type == "s":
-                pass
+                (data,) = data
+                if data == "off":
+                    group_number = None  # type: ignore
+                else:
+                    group_number = int(data)  # type: ignore
             elif data_type == "f":
-                pass
-        # TODO: implement obj file parser.
-        # Temporary hack for debugging
-        self._triangle_vertices = [
-            ((-25.0, -25.0, -25.0), (-25.0, 25.0, -25.0), (25.0, -25.0, -25.0)),  # ◣
-            ((25.0, 25.0, -25.0), (25.0, -25.0, -25.0), (-25.0, 25.0, -25.0)),  # ◥
-            ((-25.0, -25.0, 25.0), (-25.0, 25.0, 25.0), (25.0, -25.0, 25.0)),  # ◺
-            ((25.0, 25.0, 25.0), (25.0, -25.0, 25.0), (-25.0, 25.0, 25.0)),  # ◹
-        ]
+                face: list[int] | tuple[int, ...] = []
+                for part in data:
+                    v_index, vt_index, vn_index = part.split("/")  # type: ignore
+                    face.append(int(v_index) - 1)
+                faces.append(tuple(face))
+        for face in faces:
+            index_a, index_b, index_c, *_ = face
+            self._triangle_vertices.append(
+                (
+                    vertices[index_a],
+                    vertices[index_b],
+                    vertices[index_c],
+                )
+            )
 
     # Properties
     @property
@@ -179,7 +198,7 @@ class Object(object):
         return self._triangle_vertices
 
     # Update methods
-    def update(self) -> None:
+    def update(self, delta_time: float = 0.0) -> None:
         pass
 
 
@@ -214,7 +233,6 @@ class Camera(object):
         self._dash_speed = abs(dash_speed)
         self._objects: list[Object] = []
         self._triangles: list[Triangle] = []
-        self.update()
 
     # Properties
     @property
@@ -294,7 +312,7 @@ class Camera(object):
         self._yaw, self._pitch, self._roll = self._original_rotation
 
     # Update methods
-    def update(self) -> None:
+    def update(self, delta_time: float = 0.0) -> None:
         self._update_trigonometrics()
         self._update_vector()
         self._update_objects()
@@ -471,14 +489,14 @@ class SmoothCamera(Camera):
         rotation: tuple[float, float, float],
         move_speed: float = 0.5,
         dash_speed: float = 1.0,
-        deacceleration_rate: float = 0.5,
+        inertia_ratio: float = 0.5,
     ) -> None:
         self._acceleration_x = 0.0
         self._acceleration_y = 0.0
         self._acceleration_z = 0.0
         self._move_acceleration = abs(move_speed / 2.0)
         self._dash_acceleration = abs(dash_speed / 2.0)
-        self._deacceleration_rate = max(min(deacceleration_rate, 1.0), 0.0)
+        self._inertia_ratio = 1.0 - max(min(inertia_ratio, 1.0), 0.0)
         super(SmoothCamera, self).__init__(
             fov=fov,
             view=view,
@@ -594,14 +612,14 @@ class SmoothCamera(Camera):
         )
 
     # Update methods
-    def update(self) -> None:
+    def update(self, delta_time: float = 0.0) -> None:
         self._x += self._acceleration_x
         self._y += self._acceleration_y
         self._z += self._acceleration_z
-        self._acceleration_x -= self._acceleration_x * self._deacceleration_rate
-        self._acceleration_y -= self._acceleration_y * self._deacceleration_rate
-        self._acceleration_z -= self._acceleration_z * self._deacceleration_rate
-        super(SmoothCamera, self).update()
+        self._acceleration_x -= self._acceleration_x * self._inertia_ratio
+        self._acceleration_y -= self._acceleration_y * self._inertia_ratio
+        self._acceleration_z -= self._acceleration_z * self._inertia_ratio
+        super(SmoothCamera, self).update(delta_time)
 
     # Reset methods
     def reset(self) -> None:
@@ -624,7 +642,7 @@ class PlayerCamera(SmoothCamera):
         rotation: tuple[float, float, float],
         move_speed: float = 0.5,
         dash_speed: float = 1.0,
-        deacceleration_rate: float = 0.5,
+        inertia_ratio: float = 0.5,
         jump_strength: float = 0.5,
     ) -> None:
         self._jump_height = abs(jump_strength)
@@ -636,7 +654,7 @@ class PlayerCamera(SmoothCamera):
             rotation=rotation,
             move_speed=move_speed,
             dash_speed=dash_speed,
-            deacceleration_rate=deacceleration_rate,
+            inertia_ratio=inertia_ratio,
         )
 
     # Move methods
@@ -662,16 +680,16 @@ class PlayerCamera(SmoothCamera):
         pass
 
     # Update methods
-    def update(self) -> None:
+    def update(self, delta_time: float = 0.0) -> None:
         self._x += self._acceleration_x
         self._z += self._acceleration_z
-        self._acceleration_x -= self._acceleration_x * self._deacceleration_rate
-        self._acceleration_z -= self._acceleration_z * self._deacceleration_rate
+        self._acceleration_x -= self._acceleration_x * self._inertia_ratio
+        self._acceleration_z -= self._acceleration_z * self._inertia_ratio
 
         self._y += self._acceleration_y
         self._y = max(self._y, 0.0)
         if self._y > 0.0:
-            self._acceleration_y -= self._gravity * self._deacceleration_rate
+            self._acceleration_y -= self._gravity * self._inertia_ratio
         else:
             self._y = 0.0
-        super(SmoothCamera, self).update()
+        super(SmoothCamera, self).update(delta_time)

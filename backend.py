@@ -2,12 +2,13 @@ import os
 import random
 import string
 import sys
+import time
 import warnings
 from datetime import datetime
 
 from decoder import PNGSequence
 from hintings import FrameType, FramesType, RowType, EffectModeType
-from utilities import Object, PlayerCamera
+from utilities import Object, Camera, SmoothCamera, PlayerCamera  # type: ignore
 
 ASCII_CHARACTERS = "".join((string.digits, string.ascii_letters, string.punctuation))
 BINARY_CHARACTERS = "01" * 32
@@ -252,23 +253,35 @@ class Fake3DSceneGame(Backend):
 
     @property
     def frames(self) -> FramesType:
-        cube_object = Object("resource/models/cube.obj")
-        player_camera = PlayerCamera(
+        # Create objects
+        cube_object = Object("resource/models/crafting_table.obj")
+        player_camera = SmoothCamera(
             fov=90,
             view=os.get_terminal_size(),
             coordinate=(0.0, 0.0, 0.0),
             rotation=(0.0, 0.0, 0.0),
         )
         player_camera.add_object(cube_object)
+        # Update once
+        cube_object.update()
+        player_camera.update()
+        # Other Variables
         camera_info_length = len(player_camera.info)
+        perf_counter = time.perf_counter_ns()
         while True:
             screen_width, screen_height = os.get_terminal_size()
             screen_width = (screen_width // 2) * 2 or 1
             screen_height = screen_height - camera_info_length or 1
             half_width, half_height = screen_width / 2, screen_height / 2
 
+            # Object update
+            delta_time = (time.perf_counter_ns() - perf_counter) / 1e9
+            perf_counter = time.perf_counter_ns()
+            cube_object.update(delta_time)
+            player_camera.update(delta_time)
+
             # Camera controlling
-            # Third-party modules
+            # With third-party modules
             # Position
             if self._keyboard is not None:
                 # Forward
@@ -317,7 +330,7 @@ class Fake3DSceneGame(Backend):
                         yaw=-(mouse_y - 540) / 18,
                         pitch=+(mouse_x - 960) / 18,
                     )
-            # Custom `KeyboardListener`
+            # With custom `KeyboardListener` as fallback
             if self._keyboard_listener is not None:
                 key = self._keyboard_listener.get()
                 # Position
@@ -372,8 +385,6 @@ class Fake3DSceneGame(Backend):
                         player_camera.rotate(yaw=0.0, pitch=0.0, roll=+1.0)
                     elif key == "q":
                         player_camera.rotate(yaw=0.0, pitch=0.0, roll=-1.0)
-            cube_object.update()
-            player_camera.update()
 
             # Frame generation
             # Camera view
