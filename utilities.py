@@ -136,29 +136,33 @@ class Camera(object):
     def __init__(
         self,
         *,
-        fov: float,
-        view: tuple[int, int],
+        screen_size: tuple[int, int],
+        field_of_view: float,
+        near_plane: float,
+        far_plane: float,
         coordinate: Point3DType,
         rotation: RotationType,
         move_speed: float = 0.5,
         dash_speed: float = 1.0,
     ) -> None:
-        self._fov = fov
-        self._camera_width, self._camera_height = view
-        self._camera_width = (self._camera_width // 2) * 2 or 2
+        self._screen_width, self._screen_height = screen_size
+        self._screen_width = (self._screen_width // 2) * 2 or 2
         self._half_width, self._half_height = (
-            self._camera_width // 2,
-            self._camera_height // 2,
+            self._screen_width // 2,
+            self._screen_height // 2,
         )
-        if self._camera_height < 0:
+        if self._screen_height < 0:
             raise CameraScreenTooSmallError(
                 "camera screen is too small to render objects."
             )
+        self._field_of_view = field_of_view
         self._focal = (
-            max(self._camera_width, self._camera_height)
-            / math.tan(math.radians(fov / 2.0))
+            max(self._screen_width, self._screen_height)
+            / math.tan(math.radians(field_of_view / 2.0))
             / 2
         )
+        self._near_plane = near_plane
+        self._far_plane = far_plane
         self._x, self._y, self._z = coordinate
         self._original_coordinate = coordinate
         self._yaw, self._pitch, self._roll = rotation
@@ -326,42 +330,48 @@ class Camera(object):
                     triangle_c_y * self._cos_yaw + triangle_c_z * self._sin_yaw,
                     -triangle_c_y * self._sin_yaw + triangle_c_z * self._cos_yaw,
                 )
-                # Triangle vertices on camera screen
-                camera_triangle_vertex_a = (
-                    int(self._focal * triangle_a_x / triangle_a_z),
-                    int(self._focal * triangle_a_y / triangle_a_z),
-                )
-                camera_triangle_vertex_b = (
-                    int(self._focal * triangle_b_x / triangle_b_z),
-                    int(self._focal * triangle_b_y / triangle_b_z),
-                )
-                camera_triangle_vertex_c = (
-                    int(self._focal * triangle_c_x / triangle_c_z),
-                    int(self._focal * triangle_c_y / triangle_c_z),
-                )
-                # Triangle on camera screen
-                self._triangles.add(
-                    Triangle(
-                        vertex_a=camera_triangle_vertex_a,
-                        vertex_b=camera_triangle_vertex_b,
-                        vertex_c=camera_triangle_vertex_c,
+                # Near/far plane culling
+                if (
+                    self._near_plane < triangle_a_z < self._far_plane
+                    and self._near_plane < triangle_b_z < self._far_plane
+                    and self._near_plane < triangle_c_z < self._far_plane
+                ):
+                    # Triangle vertices on camera screen
+                    camera_triangle_vertex_a = (
+                        int(self._focal * triangle_a_x / triangle_a_z),
+                        int(self._focal * triangle_a_y / triangle_a_z),
                     )
-                )
+                    camera_triangle_vertex_b = (
+                        int(self._focal * triangle_b_x / triangle_b_z),
+                        int(self._focal * triangle_b_y / triangle_b_z),
+                    )
+                    camera_triangle_vertex_c = (
+                        int(self._focal * triangle_c_x / triangle_c_z),
+                        int(self._focal * triangle_c_y / triangle_c_z),
+                    )
+                    # Triangle on camera screen
+                    self._triangles.add(
+                        Triangle(
+                            vertex_a=camera_triangle_vertex_a,
+                            vertex_b=camera_triangle_vertex_b,
+                            vertex_c=camera_triangle_vertex_c,
+                        )
+                    )
 
     def _update_infomation(self) -> None:
         self._information = [
-            ("FOV: %f" % self._fov).ljust(self._camera_width),
+            ("FOV: %f" % self._field_of_view).ljust(self._screen_width),
             ("Coordinate (X, Y, Z): (%f, %f, %f)" % (self._x, self._y, self._z)).ljust(
-                self._camera_width
+                self._screen_width
             ),
             (
                 "Rotation (Yaw, Pitch, Roll): (%f, %f, %f)"
                 % (self._yaw, self._pitch, self._roll)
-            ).ljust(self._camera_width),
+            ).ljust(self._screen_width),
             (
                 "Direction vector (X, Y, Z): (%f, %f, %f)"
                 % (self._vector_x, self._vector_y, self._vector_z)
-            ).ljust(self._camera_width),
+            ).ljust(self._screen_width),
         ]
         self._information.reverse()
 
@@ -393,8 +403,10 @@ class SmoothCamera(Camera):
     def __init__(
         self,
         *,
-        fov: float,
-        view: tuple[int, int],
+        screen_size: tuple[int, int],
+        field_of_view: float,
+        near_plane: float,
+        far_plane: float,
         coordinate: Point3DType,
         rotation: RotationType,
         move_speed: float = 0.5,
@@ -408,8 +420,10 @@ class SmoothCamera(Camera):
         self._dash_acceleration = abs(dash_speed / 2.0)
         self._inertia_ratio = 1.0 - max(min(inertia_ratio, 1.0), 0.0)
         super(SmoothCamera, self).__init__(
-            fov=fov,
-            view=view,
+            screen_size=screen_size,
+            field_of_view=field_of_view,
+            near_plane=near_plane,
+            far_plane=far_plane,
             coordinate=coordinate,
             rotation=rotation,
             move_speed=move_speed,
@@ -546,8 +560,10 @@ class PlayerCamera(SmoothCamera):
     def __init__(
         self,
         *,
-        fov: float,
-        view: tuple[int, int],
+        screen_size: tuple[int, int],
+        field_of_view: float,
+        near_plane: float,
+        far_plane: float,
         coordinate: Point3DType,
         rotation: RotationType,
         move_speed: float = 0.5,
@@ -558,8 +574,10 @@ class PlayerCamera(SmoothCamera):
         self._jump_strength = abs(jump_strength)
         self._gravity = abs(GRAVITY)
         super(PlayerCamera, self).__init__(
-            fov=fov,
-            view=view,
+            screen_size=screen_size,
+            field_of_view=field_of_view,
+            near_plane=near_plane,
+            far_plane=far_plane,
             coordinate=coordinate,
             rotation=rotation,
             move_speed=move_speed,
