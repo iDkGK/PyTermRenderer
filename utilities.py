@@ -197,7 +197,7 @@ class Camera(object):
             warnings.warn(
                 "no third-party support for mouse. Using custom KeyboardListener."
             )
-        keyboard = mouse = None
+        # keyboard = mouse = None
         if keyboard is None or mouse is None:
             from controller import KeyboardListener
 
