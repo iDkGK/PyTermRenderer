@@ -2,6 +2,7 @@ import math
 import sys
 import warnings
 from pathlib import Path
+from threading import Lock
 
 from hintings import Point3DType, RotationType, VertexType, TriangleType
 
@@ -265,6 +266,7 @@ class Camera(object):
             from mouse import ButtonEvent, WheelEvent, MoveEvent  # type: ignore
 
             mouse_position = (self._screen_width, self._screen_height)
+            rotate_lock = Lock()
             mouse.move(*mouse_position)  # type: ignore
 
             def rotate(event: ButtonEvent | WheelEvent | MoveEvent):
@@ -272,10 +274,12 @@ class Camera(object):
                 if type(event) == MoveEvent:
                     mouse_x, mouse_y = mouse_position
                     mouse.move(mouse_x, mouse_y)  # type: ignore
-                    self._rotate(
-                        yaw=-(event.y - mouse_y) / 18,  # type: ignore
-                        pitch=+(event.x - mouse_x) / 18,  # type: ignore
-                    )
+                    if rotate_lock.acquire(blocking=False):
+                        self._rotate(
+                            yaw=-(event.y - mouse_y) / 27,  # type: ignore
+                            pitch=+(event.x - mouse_x) / 27,  # type: ignore
+                        )
+                        rotate_lock.release()
 
             mouse.hook(rotate)  # type: ignore
         # With custom `KeyboardListener` as fallback
