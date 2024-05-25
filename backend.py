@@ -1,9 +1,7 @@
 import os
 import random
 import string
-import sys
 import time
-import warnings
 from datetime import datetime
 
 from decoder import PNGSequence
@@ -226,30 +224,7 @@ class DigitalTimeUnit(Backend):
 
 class Fake3DSceneGame(Backend):
     def __init__(self) -> None:
-        try:
-            import keyboard
-
-            self._keyboard = keyboard
-        except ImportError:
-            self._keyboard = None
-            warnings.warn(
-                "no third-party support for keyboard. Using custom KeyboardListener."
-            )
-        try:
-            import mouse  # type: ignore
-
-            self._mouse = mouse
-        except ImportError:
-            self._mouse = None
-            warnings.warn(
-                "no third-party support for mouse. Using custom KeyboardListener."
-            )
-        if self._keyboard is None or self._mouse is None:
-            from controller import KeyboardListener
-
-            self._keyboard_listener = KeyboardListener()
-        else:
-            self._keyboard_listener = None
+        pass
 
     @property
     def frames(self) -> FramesType:
@@ -275,114 +250,7 @@ class Fake3DSceneGame(Backend):
             render_object.update(delta_time)
             smooth_camera.update(delta_time)
 
-            # Camera controlling
-            # With third-party modules
-            # Position
-            if self._keyboard is not None:
-                # Forward
-                if self._keyboard.is_pressed("shift+w"):
-                    smooth_camera.dash_forward()
-                elif self._keyboard.is_pressed("w"):
-                    smooth_camera.move_forward()
-                # Backward
-                if self._keyboard.is_pressed("shift+s"):
-                    smooth_camera.dash_backward()
-                elif self._keyboard.is_pressed("s"):
-                    smooth_camera.move_backward()
-                # Leftward
-                if self._keyboard.is_pressed("shift+a"):
-                    smooth_camera.dash_leftward()
-                elif self._keyboard.is_pressed("a"):
-                    smooth_camera.move_leftward()
-                # Rightward
-                if self._keyboard.is_pressed("shift+d"):
-                    smooth_camera.dash_rightward()
-                elif self._keyboard.is_pressed("d"):
-                    smooth_camera.move_rightward()
-                # Upward
-                if self._keyboard.is_pressed("shift+space"):
-                    smooth_camera.dash_upward()
-                elif self._keyboard.is_pressed("space"):
-                    smooth_camera.move_upward()
-                # Downward
-                if self._keyboard.is_pressed("ctrl+shift"):
-                    smooth_camera.dash_downward()
-                elif self._keyboard.is_pressed("ctrl"):
-                    smooth_camera.move_downward()
-                # Reset
-                if self._keyboard.is_pressed("r"):
-                    smooth_camera.reset()
-                # Exit
-                if self._keyboard.is_pressed("escape"):
-                    sys.exit(0)
-            # Rotation
-            if self._mouse is not None:
-                # Yaw/Pitch
-                mouse_x, mouse_y = self._mouse.get_position()
-                if mouse_x != 960 or mouse_y != 540:
-                    self._mouse.move(960, 540)  # type: ignore
-                    smooth_camera.rotate(
-                        yaw=-(mouse_y - 540) / 18,
-                        pitch=+(mouse_x - 960) / 18,
-                    )
-            # With custom `KeyboardListener` as fallback
-            if self._keyboard_listener is not None:
-                key = self._keyboard_listener.get()
-                # Position
-                if self._keyboard is None:
-                    # Forward
-                    if key == "W":
-                        smooth_camera.dash_forward()
-                    elif key == "w":
-                        smooth_camera.move_forward()
-                    # Backward
-                    elif key == "S":
-                        smooth_camera.dash_backward()
-                    elif key == "s":
-                        smooth_camera.move_backward()
-                    # Leftward
-                    elif key == "A":
-                        smooth_camera.dash_leftward()
-                    elif key == "a":
-                        smooth_camera.move_leftward()
-                    # Rightward
-                    elif key == "D":
-                        smooth_camera.dash_rightward()
-                    elif key == "d":
-                        smooth_camera.move_rightward()
-                    # Upward
-                    elif key == " ":
-                        smooth_camera.move_upward()
-                    # Downward
-                    elif key == "\r":
-                        smooth_camera.move_downward()
-                    # Reset
-                    elif key == "r":
-                        smooth_camera.reset()
-                    # Exit
-                    elif key == "\x1b":
-                        self._keyboard_listener.stop()
-                        sys.exit(0)
-                # Rotation
-                if self._mouse is None:
-                    # Yaw
-                    if key == "8":
-                        smooth_camera.rotate(yaw=+1.0, pitch=0.0, roll=0.0)
-                    elif key == "2":
-                        smooth_camera.rotate(yaw=-1.0, pitch=0.0, roll=0.0)
-                    # Pitch
-                    elif key == "4":
-                        smooth_camera.rotate(yaw=0.0, pitch=-1.0, roll=0.0)
-                    elif key == "6":
-                        smooth_camera.rotate(yaw=0.0, pitch=+1.0, roll=0.0)
-                    # Roll
-                    elif key == "e":
-                        smooth_camera.rotate(yaw=0.0, pitch=0.0, roll=+1.0)
-                    elif key == "q":
-                        smooth_camera.rotate(yaw=0.0, pitch=0.0, roll=-1.0)
-
             # Frame generation
-            # Camera view
             frame_buffer: FrameType = []
             for y in range(0, screen_height):
                 row_buffer: RowType = []
