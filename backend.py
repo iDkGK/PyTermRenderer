@@ -42,8 +42,8 @@ class TheMatrixCodeRain(Backend):
     SKY_COLOR = (12, 12, 12, 255)
 
     def __init__(self, mode: EffectModeType = "long") -> None:
-        self._terminal_width = -1
-        self._terminal_height = -1
+        self._screen_width = -1
+        self._screen_height = -1
         if mode == "ascii":
             self._code_rain_sequence = ASCII_CHARACTERS
             self._code_rain_sequence_length = ASCII_CHARACTERS_LENGTH
@@ -62,9 +62,9 @@ class TheMatrixCodeRain(Backend):
         else:
             raise InvalidEffectModeError('unknown code rain mode - "%s"')
 
-    def _spawn_code_rain(self, terminal_height: int) -> tuple[int, int, int, str]:
-        length = random.randint(terminal_height // 3, terminal_height)
-        offset = random.randint(0, terminal_height - length)
+    def _spawn_code_rain(self, screen_height: int) -> tuple[int, int, int, str]:
+        length = random.randint(screen_height // 3, screen_height)
+        offset = random.randint(0, screen_height - length)
         iterations = 0
         characters = "".join(
             self._code_rain_sequence[index * self._code_rain_sequence_length // length]
@@ -84,26 +84,26 @@ class TheMatrixCodeRain(Backend):
     @property
     def frames(self) -> FramesType:
         while True:
-            terminal_width, terminal_height = os.get_terminal_size()
+            screen_width, screen_height = os.get_terminal_size()
             if (
-                terminal_width != self._terminal_width
-                or terminal_height != self._terminal_height
+                screen_width != self._screen_width
+                or screen_height != self._screen_height
             ):
-                self._terminal_width = terminal_width
-                self._terminal_height = terminal_height
+                self._screen_width = screen_width
+                self._screen_height = screen_height
                 self._code_rains = dict(
                     (
                         x_position,
-                        self._spawn_code_rain(self._terminal_height),
+                        self._spawn_code_rain(self._screen_height),
                     )
-                    for x_position in range(0, self._terminal_width)
+                    for x_position in range(0, self._screen_width)
                 )
             frame_buffer: FrameType = []
-            for y in range(0, terminal_height):
+            for y in range(0, screen_height):
                 row_buffer: RowType = []
-                for x in range(0, terminal_width):
+                for x in range(0, screen_width):
                     fr, fg, fb, fa = TheMatrixCodeRain.SKY_COLOR
-                    c = ord(" ")
+                    c = 32
                     length, offset, iterations, characters = self._code_rains[x]
                     if offset <= y < offset + length:
                         step = offset + length - y
@@ -121,7 +121,7 @@ class TheMatrixCodeRain(Backend):
                             self._step_code_rain(x)
                         else:
                             character = " "
-                            self._code_rains[x] = self._spawn_code_rain(terminal_height)
+                            self._code_rains[x] = self._spawn_code_rain(screen_height)
                         fr, fg, fb, fa = TheMatrixCodeRain.RAIN_COLOR
                         fr = int(fr * ((step / length) ** (1 / 3)))
                         fg = int(fg * ((step / length) ** (1 / 3)))
@@ -147,7 +147,7 @@ class DigitalTimeUnit(Backend):
     @property
     def frames(self) -> FramesType:
         while True:
-            terminal_width, terminal_height = os.get_terminal_size()
+            screen_width, screen_height = os.get_terminal_size()
             current_time = datetime.now()
             time_string = "%02d:%02d:%02d" % (
                 current_time.hour,
@@ -156,13 +156,13 @@ class DigitalTimeUnit(Backend):
             )
             time_string_length = len(time_string)
             canvas_width, canvas_height = (
-                terminal_width * 80 // 100,
-                terminal_height * 40 // 100,
+                screen_width * 80 // 100,
+                screen_height * 40 // 100,
             )
-            canvas_left_border = (terminal_width - canvas_width) // 2
-            canvas_right_border = terminal_width - canvas_left_border
-            canvas_top_border = (terminal_height - canvas_height) // 2
-            canvas_bottom_border = terminal_height - canvas_top_border
+            canvas_left_border = (screen_width - canvas_width) // 2
+            canvas_right_border = screen_width - canvas_left_border
+            canvas_top_border = (screen_height - canvas_height) // 2
+            canvas_bottom_border = screen_height - canvas_top_border
             unit_width, unit_height = (
                 canvas_width // time_string_length,
                 canvas_height,
@@ -182,11 +182,11 @@ class DigitalTimeUnit(Backend):
                 ),
             )
             frame_buffer: FrameType = []
-            for y in range(0, terminal_height):
+            for y in range(0, screen_height):
                 row_buffer: RowType = []
-                for x in range(0, terminal_width):
+                for x in range(0, screen_width):
                     fr, fg, fb, fa = DigitalTimeUnit.BG_COLOR
-                    c = ord(" ")
+                    c = 32
                     if (
                         canvas_top_border <= y < canvas_bottom_border
                         and canvas_left_border <= x < canvas_right_border

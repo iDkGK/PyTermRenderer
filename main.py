@@ -10,7 +10,7 @@ from controller import KeyboardListener
 from decoder import PNG, PNGSequence
 from hintings import FramesType
 from renderer import (
-    clear_terminal,
+    clear_screen,
     render_frame,
     render_ascii,
     render_gray,
@@ -175,7 +175,7 @@ def play_dynamic_png_images_in_parallel() -> FramesType:
 
 
 if __name__ == "__main__":
-    clear_terminal()
+    clear_screen()
     # play_code_rain_animation(fps=15)
     # play_digital_clock_animation(fps=10)
     play_fake_3d_scene_game(fps=30)

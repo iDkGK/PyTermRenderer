@@ -16,10 +16,11 @@ PyTermRenderer, written in Python3, is a tool to render images, or to create and
 - hintings.py - custom type bindings for IDE level type hinting
 - main.py - the entry point of this project
 - renderer.py - providing different kinds of rendering APIs
-  - `clear_terminal` - a function to clear terminal
   - `render_frame` - a function to render a frame of RGBA colors and characters
   - `render_ascii` - a function to render a frame of RGBA colors with ASCII letters
-  - `render_gray` - a function to  render a frame of RGBA colors in grayscale mode
+  - `render_gray` - a function to render a frame of RGBA colors in grayscale mode
+  - `render_rgba` - a function to render a frame with RGBA colored background
+  - `clear_screen` - a function to clear terminal screen
 
 ## Features
 

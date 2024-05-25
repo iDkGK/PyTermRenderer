@@ -52,7 +52,7 @@ class Triangle(object):
         return coordinate in self._coordinates
 
     def get_pixel(self, x: int, y: int) -> tuple[int, ...]:
-        return (255, 255, 255, 255, ord("█"))
+        return (255, 255, 255, 255, 9608)
 
 
 class Object(object):
@@ -387,7 +387,7 @@ class Camera(object):
         for triangle in self._triangles:
             if (camera_x, camera_y) in triangle:
                 return triangle.get_pixel(camera_x, camera_y)
-        return (255, 255, 255, 255, ord(" "))
+        return (255, 255, 255, 255, 32)
 
     # Objects-related methods
     def show_object(self, obj: Object) -> None:

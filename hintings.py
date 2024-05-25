@@ -16,4 +16,3 @@ TriangleType = tuple[VertexType, VertexType, VertexType]
 
 # Others
 EffectModeType = Literal["ascii", "binary", "short", "standard", "long"]
-RenderModeType = Literal["frame", "ascii", "gray", "rgba"]
