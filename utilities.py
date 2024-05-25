@@ -264,17 +264,18 @@ class Camera(object):
         if mouse is not None:
             from mouse import ButtonEvent, WheelEvent, MoveEvent  # type: ignore
 
-            mouse_position = mouse.get_position()
+            mouse_position = (self._screen_width, self._screen_height)
+            mouse.move(*mouse_position)  # type: ignore
 
             def rotate(event: ButtonEvent | WheelEvent | MoveEvent):
                 nonlocal mouse_position
                 if type(event) == MoveEvent:
                     mouse_x, mouse_y = mouse_position
+                    mouse.move(mouse_x, mouse_y)  # type: ignore
                     self._rotate(
                         yaw=-(event.y - mouse_y) / 18,  # type: ignore
                         pitch=+(event.x - mouse_x) / 18,  # type: ignore
                     )
-                    mouse_position = (event.x, event.y)  # type: ignore
 
             mouse.hook(rotate)  # type: ignore
         # With custom `KeyboardListener` as fallback
