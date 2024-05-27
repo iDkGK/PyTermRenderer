@@ -4,17 +4,55 @@ import warnings
 from pathlib import Path
 from threading import Lock
 
-from hintings import Point3DType, RotationType, VertexType, TriangleType
+from hintings import FrameType, Point3DType, RotationType, Vertex3DType, Triangle3DType
 
 
-class Triangle(object):
-    def __init__(
-        self,
+class TriangleUtils(object):
+    line_buffer: dict[tuple[tuple[int, int], ...], set[tuple[int, int]]] = {}
+
+    @classmethod
+    def get_line(cls, vertices: tuple[tuple[int, int], ...]) -> set[tuple[int, int]]:
+        vertex_number = len(vertices)
+        lines: set[tuple[int, int]] = set()
+        for index0, index1 in zip(range(0, vertex_number), range(1 - vertex_number, 1)):
+            vertex0, vertex1 = vertices[index0], vertices[index1]
+            lines |= cls.line_buffer.get(
+                (vertex0, vertex1), cls.bresenham_line(vertex0, vertex1)
+            )
+        return lines
+
+    @staticmethod
+    def bresenham_line(
+        vertex0: tuple[int, int], vertex1: tuple[int, int]
+    ) -> set[tuple[int, int]]:
+        # Bresenham line algorithm
+        line: set[tuple[int, int]] = set()
+        (x0, y0), (x1, y1) = vertex0, vertex1
+        delta_x = abs(x1 - x0)
+        delta_y = abs(y1 - y0)
+        step_x = 1 if x0 < x1 else -1
+        step_y = 1 if y0 < y1 else -1
+        error = delta_x - delta_y
+        while True:
+            line.add((x0, y0))
+            if x0 == x1 and y0 == y1:
+                break
+            double_error = 2 * error
+            if double_error > -delta_y:
+                error -= delta_y
+                x0 += step_x
+            if double_error < delta_x:
+                error += delta_x
+                y0 += step_y
+        return line
+
+    @staticmethod
+    def sort_counterclockwisely(
         vertex_a: tuple[int, int],
         vertex_b: tuple[int, int],
         vertex_c: tuple[int, int],
-    ) -> None:
-        # Counterclock reorder
+    ) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int]]:
+        # Sort the vertices counterclockwisely
         vertex_a, vertex_b, vertex_c = sorted(
             (vertex_a, vertex_b, vertex_c),
             key=lambda tuple_xy: tuple_xy[1],
@@ -27,44 +65,16 @@ class Triangle(object):
                 (vertex_b, vertex_c),
                 key=lambda tuple_xy: tuple_xy[0],
             )
-        # Bresenham line algorithm
-        self._coordinates: set[tuple[int, int]] = set()
-        for (x0, y0), (x1, y1) in (
-            (vertex_a, vertex_b),
-            (vertex_b, vertex_c),
-            (vertex_c, vertex_a),
-        ):
-            delta_x = abs(x1 - x0)
-            delta_y = abs(y1 - y0)
-            step_x = 1 if x0 < x1 else -1
-            step_y = 1 if y0 < y1 else -1
-            error = delta_x - delta_y
-            while True:
-                self._coordinates.add((x0, y0))
-                if x0 == x1 and y0 == y1:
-                    break
-                double_error = 2 * error
-                if double_error > -delta_y:
-                    error -= delta_y
-                    x0 += step_x
-                if double_error < delta_x:
-                    error += delta_x
-                    y0 += step_y
-
-    def __contains__(self, coordinate: tuple[int, int]) -> bool:
-        return coordinate in self._coordinates
-
-    def get_pixel(self, x: int, y: int) -> tuple[int, ...]:
-        return (255, 255, 255, 255, 9608)
+        return (vertex_a, vertex_b, vertex_c)
 
 
 class Object(object):
     def __init__(self, filepath: str) -> None:
         self._filepath = Path(filepath)
         self._name = ""
-        self._triangle_vertices: set[TriangleType] = set()
+        self._triangle_vertices: set[Triangle3DType] = set()
         # Parse file data and retrieve triangles vertices
-        vertices: list[VertexType] = []
+        vertices: list[Vertex3DType] = []
         normals: list[tuple[float, float, float]] = []
         textures: list[tuple[float, ...]] = []
         faces: list[tuple[int, ...]] = []
@@ -116,7 +126,7 @@ class Object(object):
         return self._name
 
     @property
-    def triangle_vertices(self) -> set[TriangleType]:
+    def triangle_vertices(self) -> set[Triangle3DType]:
         return self._triangle_vertices
 
     # Update methods
@@ -174,7 +184,7 @@ class Camera(object):
         self._move_speed = abs(move_speed)
         self._dash_speed = abs(dash_speed)
         self._objects: set[Object] = set()
-        self._triangles: set[Triangle] = set()
+        self._lines: set[tuple[int, int]] = set()
         self._information: list[str] = []
         self._controllable = controllable
         self._register_controller()
@@ -442,10 +452,8 @@ class Camera(object):
         self._vector_z = self._cos_pitch  # Z component
 
     def _update_objects(self) -> None:
-        # Triangles
-        self._triangles.clear()
-        # Iteration over all triangles
-        # Assuming that every triangle is ▲abc
+        # Iteration over all triangles. Assuming that every triangle is ▲abc
+        self._lines: set[tuple[int, int]] = set()
         for obj in self._objects:
             for triangle_vertices in obj.triangle_vertices:
                 (
@@ -517,16 +525,16 @@ class Camera(object):
                         int(self._focal * triangle_c_y / triangle_c_z),
                     )
                     # Triangle on camera screen
-                    self._triangles.add(
-                        Triangle(
-                            vertex_a=camera_triangle_vertex_a,
-                            vertex_b=camera_triangle_vertex_b,
-                            vertex_c=camera_triangle_vertex_c,
-                        )
+                    triangle_vertices = TriangleUtils.sort_counterclockwisely(
+                        vertex_a=camera_triangle_vertex_a,
+                        vertex_b=camera_triangle_vertex_b,
+                        vertex_c=camera_triangle_vertex_c,
                     )
+                    self._lines |= TriangleUtils.get_line(triangle_vertices)
 
     def _update_infomation(self) -> None:
         self._information = [
+            *(("".ljust(self._screen_width),) * self._screen_height),
             ("FOV: %f" % self._field_of_view).ljust(self._screen_width),
             ("Coordinate (X, Y, Z): (%f, %f, %f)" % (self._x, self._y, self._z)).ljust(
                 self._screen_width
@@ -549,18 +557,21 @@ class Camera(object):
         self._update_infomation()
 
     # Draw methods
-    def get_pixel(self, x: int, y: int) -> tuple[int, ...]:
-        if (
-            self._information[y:]
-            and self._information[y:][0][x:]
-            and self._information[y:][0][x:][0] != " "
-        ):
-            return (255, 255, 255, 255, ord(self._information[y:][0][x:][0]))
-        camera_x, camera_y = (x - self._half_width) // 2, y - self._half_height
-        for triangle in self._triangles:
-            if (camera_x, camera_y) in triangle:
-                return triangle.get_pixel(camera_x, camera_y)
-        return (255, 255, 255, 255, 32)
+    def get_frame(self) -> FrameType:
+        frame: FrameType = [
+            [
+                (
+                    (255, 255, 255, 255, 9608)
+                    if ((x - self._half_width) // 2, y - self._half_height)
+                    in self._lines
+                    else (255, 255, 255, 255, 32)
+                )
+                for x in range(0, self._screen_width)
+            ]
+            for y in range(0, self._screen_height)
+        ]
+        frame.reverse()
+        return frame
 
     # Objects-related methods
     def show_object(self, obj: Object) -> None:

@@ -241,8 +241,6 @@ class Fake3DSceneGame(Backend):
         smooth_camera.show_object(render_object)
         perf_counter = time.perf_counter_ns()
         while True:
-            screen_width, screen_height = os.get_terminal_size()
-            screen_width = (screen_width // 2) * 2 or 2
 
             # Object update
             delta_time = (time.perf_counter_ns() - perf_counter) / 1e9
@@ -251,11 +249,4 @@ class Fake3DSceneGame(Backend):
             smooth_camera.update(delta_time)
 
             # Frame generation
-            frame_buffer: FrameType = []
-            for y in range(0, screen_height):
-                row_buffer: RowType = []
-                for x in range(0, screen_width):
-                    row_buffer.append(smooth_camera.get_pixel(x, y))
-                frame_buffer.insert(0, row_buffer)
-
-            yield frame_buffer
+            yield smooth_camera.get_frame()

@@ -11,8 +11,8 @@ FrameType = list[RowType]
 FramesType = Iterable[FrameType]
 Point3DType = tuple[float, float, float]
 RotationType = tuple[float, float]
-VertexType = tuple[float, float, float]
-TriangleType = tuple[VertexType, VertexType, VertexType]
+Vertex3DType = tuple[float, float, float]
+Triangle3DType = tuple[Vertex3DType, Vertex3DType, Vertex3DType]
 
 # Others
 EffectModeType = Literal["ascii", "binary", "short", "standard", "long"]
