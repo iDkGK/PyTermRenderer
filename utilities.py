@@ -169,7 +169,7 @@ class Camera(object):
         self._far_plane = far_plane
         self._x, self._y, self._z = coordinate
         self._original_coordinate = coordinate
-        self._yaw, self._pitch, self._roll = rotation
+        self._yaw, self._pitch = rotation
         self._original_rotation = rotation
         self._move_speed = abs(move_speed)
         self._dash_speed = abs(dash_speed)
@@ -206,20 +206,20 @@ class Camera(object):
         else:
             keyboard_listener = None
 
-        # Quit state
+        # Quit and reset state
         self._quit_state = False
+        self._reset_state = False
 
         # With third-party modules
         # Move state
         self._dash_state = False
-        self._forward_state = False
-        self._backward_state = False
-        self._leftward_state = False
-        self._rightward_state = False
-        self._upward_state = False
-        self._downward_state = False
-        self._reset_state = False
-        # Position
+        self._move_forward_state = False
+        self._move_backward_state = False
+        self._move_leftward_state = False
+        self._move_rightward_state = False
+        self._move_upward_state = False
+        self._move_downward_state = False
+        # Keyboard
         if keyboard is not None:
             from keyboard import KeyboardEvent, KEY_DOWN, KEY_UP
 
@@ -228,31 +228,34 @@ class Camera(object):
             def quit(event: KeyboardEvent) -> None:
                 self._quit_state = active_states.get(event.event_type, False)
 
+            def reset(event: KeyboardEvent) -> None:
+                self._reset_state = active_states.get(event.event_type, False)
+
             def dash(event: KeyboardEvent) -> None:
                 self._dash_state = active_states.get(event.event_type, False)
 
             def move_forward(event: KeyboardEvent) -> None:
-                self._forward_state = active_states.get(event.event_type, False)
+                self._move_forward_state = active_states.get(event.event_type, False)
 
             def move_backward(event: KeyboardEvent) -> None:
-                self._backward_state = active_states.get(event.event_type, False)
+                self._move_backward_state = active_states.get(event.event_type, False)
 
             def move_leftward(event: KeyboardEvent) -> None:
-                self._leftward_state = active_states.get(event.event_type, False)
+                self._move_leftward_state = active_states.get(event.event_type, False)
 
             def move_rightward(event: KeyboardEvent) -> None:
-                self._rightward_state = active_states.get(event.event_type, False)
+                self._move_rightward_state = active_states.get(event.event_type, False)
 
             def move_upward(event: KeyboardEvent) -> None:
-                self._upward_state = active_states.get(event.event_type, False)
+                self._move_upward_state = active_states.get(event.event_type, False)
 
             def move_downward(event: KeyboardEvent) -> None:
-                self._downward_state = active_states.get(event.event_type, False)
+                self._move_downward_state = active_states.get(event.event_type, False)
 
-            def reset(event: KeyboardEvent) -> None:
-                self._reset_state = active_states.get(event.event_type, False)
-
+            # Quiting
             keyboard.hook_key("escape", quit)
+            # Position
+            keyboard.hook_key("r", reset)
             keyboard.hook_key("shift", dash)
             keyboard.hook_key("w", move_forward)
             keyboard.hook_key("s", move_backward)
@@ -260,48 +263,37 @@ class Camera(object):
             keyboard.hook_key("d", move_rightward)
             keyboard.hook_key("space", move_upward)
             keyboard.hook_key("ctrl", move_downward)
-            keyboard.hook_key("r", reset)
-        # Rotation
+        # Mouse
         if mouse is not None:
-            from mouse import ButtonEvent, WheelEvent, MoveEvent, UP, DOWN, RIGHT  # type: ignore
+            from mouse import ButtonEvent, WheelEvent, MoveEvent  # type: ignore
 
-            roll_state = False
             rotate_lock = Lock()
 
             def rotate(event: ButtonEvent | WheelEvent | MoveEvent) -> None:
-                nonlocal roll_state
                 if not rotate_lock.acquire(blocking=False):
                     return
                 while mouse.get_position() != (self._screen_width, self._screen_height):
                     mouse.move(self._screen_width, self._screen_height)  # type: ignore
-                if type(event) == ButtonEvent:
-                    if event.button == RIGHT:  # type: ignore
-                        if event.event_type == DOWN:  # type: ignore
-                            roll_state = True
-                        elif event.event_type == UP:  # type: ignore
-                            roll_state = False
-                elif type(event) == MoveEvent:
-                    if roll_state:
-                        self._rotate(
-                            roll=+(event.x - self._screen_width) / 72,  # type: ignore
-                        )
-                    else:
-                        self._rotate(
-                            yaw=-(event.y - self._screen_height) / 72,  # type: ignore
-                            pitch=+(event.x - self._screen_width) / 72,  # type: ignore
-                        )
+                if type(event) == MoveEvent:
+                    self._rotate(
+                        yaw=-(event.y - self._screen_height) / 72,  # type: ignore
+                        pitch=+(event.x - self._screen_width) / 72,  # type: ignore
+                    )
                 rotate_lock.release()
 
+            # Rotation
             mouse.hook(rotate)  # type: ignore
         # With custom `KeyboardListener` as fallback
         if keyboard_listener is not None:
 
-            def stop_keyboard_listener() -> None:
+            def stop_and_quit() -> None:
                 keyboard_listener.stop()
                 self._quit_state = True
 
+            # Quiting
+            keyboard_listener.register("\x1b", stop_and_quit)
             # Position
-            keyboard_listener.register("\x1b", stop_keyboard_listener)
+            keyboard_listener.register("r", self._reset)
             keyboard_listener.register("W", self._dash_forward)
             keyboard_listener.register("w", self._move_forward)
             keyboard_listener.register("S", self._dash_backward)
@@ -312,14 +304,16 @@ class Camera(object):
             keyboard_listener.register("d", self._move_rightward)
             keyboard_listener.register(" ", self._move_upward)
             keyboard_listener.register("\r", self._move_downward)
-            keyboard_listener.register("r", self._reset)
             # Rotation
-            keyboard_listener.register("8", self._rotate_yaw_forward)
-            keyboard_listener.register("2", self._rotate_yaw_reverse)
-            keyboard_listener.register("6", self._rotate_pitch_forward)
-            keyboard_listener.register("4", self._rotate_pitch_reverse)
-            keyboard_listener.register("e", self._rotate_roll_forward)
-            keyboard_listener.register("q", self._rotate_roll_reverse)
+            keyboard_listener.register("8", self._yaw_forward)
+            keyboard_listener.register("2", self._yaw_reverse)
+            keyboard_listener.register("6", self._pitch_forward)
+            keyboard_listener.register("4", self._pitch_reverse)
+
+    # Reset methods
+    def _reset(self) -> None:
+        self._x, self._y, self._z = self._original_coordinate
+        self._yaw, self._pitch = self._original_rotation
 
     # Move methods
     def _move_forward(self) -> None:
@@ -367,98 +361,80 @@ class Camera(object):
         self._y -= self._dash_speed
 
     # Rotate methods
-    def _rotate_yaw_forward(self) -> None:
+    def _yaw_forward(self) -> None:
         self._yaw += 1.0
         self._yaw = max(min(self._yaw, 90.0), -90.0)
 
-    def _rotate_yaw_reverse(self) -> None:
+    def _yaw_reverse(self) -> None:
         self._yaw -= 1.0
         self._yaw = max(min(self._yaw, 90.0), -90.0)
 
-    def _rotate_pitch_forward(self) -> None:
+    def _pitch_forward(self) -> None:
         self._pitch += 1.0
         self._pitch %= 360.0
 
-    def _rotate_pitch_reverse(self) -> None:
+    def _pitch_reverse(self) -> None:
         self._pitch -= 1.0
         self._pitch %= 360.0
-
-    def _rotate_roll_forward(self) -> None:
-        self._roll += 1.0
-        self._roll %= 360.0
-
-    def _rotate_roll_reverse(self) -> None:
-        self._roll -= 1.0
-        self._roll %= 360.0
 
     def _rotate(
         self,
         *,
         yaw: float = 0.0,
         pitch: float = 0.0,
-        roll: float = 0.0,
     ) -> None:
         self._yaw += yaw
         self._pitch += pitch
-        self._roll += roll
         self._yaw = max(min(self._yaw, 90.0), -90.0)
         self._pitch %= 360.0
-        self._roll %= 360.0
-
-    # Reset methods
-    def _reset(self) -> None:
-        self._x, self._y, self._z = self._original_coordinate
-        self._yaw, self._pitch, self._roll = self._original_rotation
 
     # Update methods
     def _update_position(self) -> None:
         if not self._controllable:
             return
-        if self._forward_state:
+        if self._quit_state:
+            sys.exit(0)
+        if self._reset_state:
+            self._reset()
+            return
+        if self._move_forward_state:
             if self._dash_state:
                 self._dash_forward()
             else:
                 self._move_forward()
-        if self._backward_state:
+        if self._move_backward_state:
             if self._dash_state:
                 self._dash_backward()
             else:
                 self._move_backward()
-        if self._leftward_state:
+        if self._move_leftward_state:
             if self._dash_state:
                 self._dash_leftward()
             else:
                 self._move_leftward()
-        if self._rightward_state:
+        if self._move_rightward_state:
             if self._dash_state:
                 self._dash_rightward()
             else:
                 self._move_rightward()
-        if self._upward_state:
+        if self._move_upward_state:
             if self._dash_state:
                 self._dash_upward()
             else:
                 self._move_upward()
-        if self._downward_state:
+        if self._move_downward_state:
             if self._dash_state:
                 self._dash_downward()
             else:
                 self._move_downward()
-        if self._reset_state:
-            self._reset()
-        if self._quit_state:
-            sys.exit(0)
 
     def _update_trigonometrics(self) -> None:
         yaw_radians = math.radians(-self._yaw)
         pitch_radians = math.radians(self._pitch)
-        roll_radians = -math.radians(self._roll)
         self._sin_yaw = math.sin(yaw_radians)
         self._cos_yaw = math.cos(yaw_radians)
         self._sin_pitch = math.sin(pitch_radians)
         self._cos_pitch = math.cos(pitch_radians)
-        self._sin_roll = math.sin(roll_radians)
-        self._cos_roll = math.cos(roll_radians)
 
     def _update_vector(self) -> None:
         self._vector_x = self._sin_pitch  # X component
@@ -495,19 +471,6 @@ class Camera(object):
                     triangle_c_z - self._z,
                 )
                 # Rotation
-                # Z-axis rotation that affects X/Y coordinates
-                triangle_a_x, triangle_a_y = (
-                    triangle_a_x * self._cos_roll + triangle_a_y * self._sin_roll,
-                    -triangle_a_x * self._sin_roll + triangle_a_y * self._cos_roll,
-                )
-                triangle_b_x, triangle_b_y = (
-                    triangle_b_x * self._cos_roll + triangle_b_y * self._sin_roll,
-                    -triangle_b_x * self._sin_roll + triangle_b_y * self._cos_roll,
-                )
-                triangle_c_x, triangle_c_y = (
-                    triangle_c_x * self._cos_roll + triangle_c_y * self._sin_roll,
-                    -triangle_c_x * self._sin_roll + triangle_c_y * self._cos_roll,
-                )
                 # Y-axis rotation that affects X/Z coordinates
                 triangle_a_x, triangle_a_z = (
                     triangle_a_x * self._cos_pitch - triangle_a_z * self._sin_pitch,
@@ -568,12 +531,11 @@ class Camera(object):
             ("Coordinate (X, Y, Z): (%f, %f, %f)" % (self._x, self._y, self._z)).ljust(
                 self._screen_width
             ),
+            ("Rotation (Yaw, Pitch): (%f, %f)" % (self._yaw, self._pitch)).ljust(
+                self._screen_width
+            ),
             (
-                "Rotation (Yaw, Pitch, Roll): (%f, %f, %f)"
-                % (self._yaw, self._pitch, self._roll)
-            ).ljust(self._screen_width),
-            (
-                "Direction vector (X, Y, Z): (%f, %f, %f)"
+                "Direction vector (X, Z): (%f, %f, %f)"
                 % (self._vector_x, self._vector_y, self._vector_z)
             ).ljust(self._screen_width),
         ]

@@ -236,7 +236,7 @@ class Fake3DSceneGame(Backend):
             near_plane=0.0,
             far_plane=1000.0,
             coordinate=(0.0, 0.0, 0.0),
-            rotation=(0.0, 0.0, 0.0),
+            rotation=(0.0, 0.0),
         )
         smooth_camera.show_object(render_object)
         perf_counter = time.perf_counter_ns()

@@ -10,7 +10,7 @@ RowType = list[tuple[int, ...]]
 FrameType = list[RowType]
 FramesType = Iterable[FrameType]
 Point3DType = tuple[float, float, float]
-RotationType = tuple[float, float, float]
+RotationType = tuple[float, float]
 VertexType = tuple[float, float, float]
 TriangleType = tuple[VertexType, VertexType, VertexType]
 
