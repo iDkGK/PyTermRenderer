@@ -80,31 +80,30 @@ def render_frame(frame: FrameType, fps: int) -> None:
         frame (FrameType): frame buffer to render
         fps (int): fps limit. 0 means unlimited. Defaults to 0
     """
-    if not frame:
-        return
-    global __screen_width__, __screen_height__, __frame_buffer__, __time_counter__
-    screen_width, screen_height = os.get_terminal_size()
-    frame_width, frame_height = len(frame[0]), len(frame)
-    frame_buffer: list[str] = []
-    if __screen_width__ != screen_width or __screen_height__ != screen_height:
-        __screen_width__ = screen_width
-        __screen_height__ = screen_height
-        __frame_buffer__ = None
-        clear_screen(mode=2)
-    for y in range(0, screen_height):
-        frame_y = y * frame_height // screen_height
-        for x in range(0, screen_width):
-            frame_x = x * frame_width // screen_width
-            if __frame_buffer__ is None or (
-                __frame_buffer__[frame_y][frame_x] != frame[frame_y][frame_x]
-            ):
-                fr, fg, fb, fa, c = frame[frame_y][frame_x]
-                frame_buffer.append(
-                    "\x1b[%d;%dH\x1b[38;2;%d;%d;%d;%dm%c"
-                    % (y + 1, x + 1, fr, fg, fb, fa // 255, c)
-                )
-    __frame_buffer__ = frame
-    print(end="".join(frame_buffer))
+    if frame:
+        global __screen_width__, __screen_height__, __frame_buffer__, __time_counter__
+        screen_width, screen_height = os.get_terminal_size()
+        frame_width, frame_height = len(frame[0]), len(frame)
+        frame_buffer: list[str] = []
+        if __screen_width__ != screen_width or __screen_height__ != screen_height:
+            __screen_width__ = screen_width
+            __screen_height__ = screen_height
+            __frame_buffer__ = None
+            clear_screen(mode=2)
+        for y in range(0, screen_height):
+            frame_y = y * frame_height // screen_height
+            for x in range(0, screen_width):
+                frame_x = x * frame_width // screen_width
+                if __frame_buffer__ is None or (
+                    __frame_buffer__[frame_y][frame_x] != frame[frame_y][frame_x]
+                ):
+                    fr, fg, fb, fa, c = frame[frame_y][frame_x]
+                    frame_buffer.append(
+                        "\x1b[%d;%dH\x1b[38;2;%d;%d;%d;%dm%c"
+                        % (y + 1, x + 1, fr, fg, fb, fa // 255, c)
+                    )
+        __frame_buffer__ = frame
+        print(end="".join(frame_buffer))
     time.sleep(
         max(
             0,
@@ -124,46 +123,45 @@ def render_ascii(frame: FrameType, fps: int) -> None:
         frame (FrameType): frame buffer to render
         fps (int): fps limit. 0 means unlimited. Defaults to 0
     """
-    if not frame:
-        return
-    global __screen_width__, __screen_height__, __ascii_buffer__, __time_counter__
-    screen_width, screen_height = os.get_terminal_size()
-    frame_width, frame_height = len(frame[0]), len(frame)
-    frame_buffer: list[str] = []
-    if __screen_width__ != screen_width or __screen_height__ != screen_height:
-        __screen_width__ = screen_width
-        __screen_height__ = screen_height
-        __ascii_buffer__ = None
-        clear_screen(mode=2)
-    for y in range(0, screen_height):
-        frame_y = y * frame_height // screen_height
-        for x in range(0, screen_width):
-            frame_x = x * frame_width // screen_width
-            if __ascii_buffer__ is None or (
-                __ascii_buffer__[frame_y][frame_x] != frame[frame_y][frame_x]
-            ):
-                r, g, b, a = frame[frame_y][frame_x]
-                c_linear = r * __R_FACTOR__ + g * __G_FACTOR__ + b * __B_FACTOR__
-                frame_buffer.append(
-                    "\x1b[%d;%dH%c"
-                    % (
-                        y + 1,
-                        x + 1,
-                        __SHORT_ASCII_SEQUENCE__[
-                            round(
-                                (
-                                    1.055 * (c_linear**__C_POWER__) - 0.055
-                                    if c_linear > 0.0031308
-                                    else 12.92 * c_linear
+    if frame:
+        global __screen_width__, __screen_height__, __ascii_buffer__, __time_counter__
+        screen_width, screen_height = os.get_terminal_size()
+        frame_width, frame_height = len(frame[0]), len(frame)
+        frame_buffer: list[str] = []
+        if __screen_width__ != screen_width or __screen_height__ != screen_height:
+            __screen_width__ = screen_width
+            __screen_height__ = screen_height
+            __ascii_buffer__ = None
+            clear_screen(mode=2)
+        for y in range(0, screen_height):
+            frame_y = y * frame_height // screen_height
+            for x in range(0, screen_width):
+                frame_x = x * frame_width // screen_width
+                if __ascii_buffer__ is None or (
+                    __ascii_buffer__[frame_y][frame_x] != frame[frame_y][frame_x]
+                ):
+                    r, g, b, a = frame[frame_y][frame_x]
+                    c_linear = r * __R_FACTOR__ + g * __G_FACTOR__ + b * __B_FACTOR__
+                    frame_buffer.append(
+                        "\x1b[%d;%dH%c"
+                        % (
+                            y + 1,
+                            x + 1,
+                            __SHORT_ASCII_SEQUENCE__[
+                                round(
+                                    (
+                                        1.055 * (c_linear**__C_POWER__) - 0.055
+                                        if c_linear > 0.0031308
+                                        else 12.92 * c_linear
+                                    )
+                                    * (a / 255)
+                                    * __SHORT_ASCII_SEQUENCE_RANGE__
                                 )
-                                * (a / 255)
-                                * __SHORT_ASCII_SEQUENCE_RANGE__
-                            )
-                        ],
+                            ],
+                        )
                     )
-                )
-    __ascii_buffer__ = frame
-    print(end="".join(frame_buffer))
+        __ascii_buffer__ = frame
+        print(end="".join(frame_buffer))
     time.sleep(
         max(
             0,
@@ -184,40 +182,39 @@ def render_gray(frame: FrameType, fps: int) -> None:
         fps (int): fps limit. 0 means unlimited. Defaults to 0
         size (tuple[int, int]): target rendering size
     """
-    if not frame:
-        return
-    global __screen_width__, __screen_height__, __gray_buffer__, __time_counter__
-    screen_width, screen_height = os.get_terminal_size()
-    frame_width, frame_height = len(frame[0]), len(frame)
-    frame_buffer: list[str] = []
-    if __screen_width__ != screen_width or __screen_height__ != screen_height:
-        __screen_width__ = screen_width
-        __screen_height__ = screen_height
-        __gray_buffer__ = None
-        clear_screen(mode=2)
-    for y in range(0, screen_height):
-        frame_y = y * frame_height // screen_height
-        for x in range(0, screen_width):
-            frame_x = x * frame_width // screen_width
-            if __gray_buffer__ is None or (
-                __gray_buffer__[frame_y][frame_x] != frame[frame_y][frame_x]
-            ):
-                r, g, b, a = frame[frame_y][frame_x]
-                c_linear = r * __R_FACTOR__ + g * __G_FACTOR__ + b * __B_FACTOR__
-                r = g = b = round(
-                    (
-                        1.055 * (c_linear**__C_POWER__) - 0.055
-                        if c_linear > 0.0031308
-                        else 12.92 * c_linear
+    if frame:
+        global __screen_width__, __screen_height__, __gray_buffer__, __time_counter__
+        screen_width, screen_height = os.get_terminal_size()
+        frame_width, frame_height = len(frame[0]), len(frame)
+        frame_buffer: list[str] = []
+        if __screen_width__ != screen_width or __screen_height__ != screen_height:
+            __screen_width__ = screen_width
+            __screen_height__ = screen_height
+            __gray_buffer__ = None
+            clear_screen(mode=2)
+        for y in range(0, screen_height):
+            frame_y = y * frame_height // screen_height
+            for x in range(0, screen_width):
+                frame_x = x * frame_width // screen_width
+                if __gray_buffer__ is None or (
+                    __gray_buffer__[frame_y][frame_x] != frame[frame_y][frame_x]
+                ):
+                    r, g, b, a = frame[frame_y][frame_x]
+                    c_linear = r * __R_FACTOR__ + g * __G_FACTOR__ + b * __B_FACTOR__
+                    r = g = b = round(
+                        (
+                            1.055 * (c_linear**__C_POWER__) - 0.055
+                            if c_linear > 0.0031308
+                            else 12.92 * c_linear
+                        )
+                        * 255
                     )
-                    * 255
-                )
-                frame_buffer.append(
-                    "\x1b[%d;%dH\x1b[38;2;%d;%d;%d;%dm█"
-                    % (y + 1, x + 1, r, g, b, a // 255)
-                )
-    __gray_buffer__ = frame
-    print(end="".join(frame_buffer))
+                    frame_buffer.append(
+                        "\x1b[%d;%dH\x1b[38;2;%d;%d;%d;%dm█"
+                        % (y + 1, x + 1, r, g, b, a // 255)
+                    )
+        __gray_buffer__ = frame
+        print(end="".join(frame_buffer))
     time.sleep(
         max(
             0,
@@ -238,31 +235,30 @@ def render_rgba(frame: FrameType, fps: int) -> None:
         fps (int): fps limit. 0 means unlimited. Defaults to 0
         size (tuple[int, int]): target rendering size
     """
-    if not frame:
-        return
-    global __screen_width__, __screen_height__, __rgba_buffer__, __time_counter__
-    screen_width, screen_height = os.get_terminal_size()
-    frame_width, frame_height = len(frame[0]), len(frame)
-    frame_buffer: list[str] = []
-    if __screen_width__ != screen_width or __screen_height__ != screen_height:
-        __screen_width__ = screen_width
-        __screen_height__ = screen_height
-        __rgba_buffer__ = None
-        clear_screen(mode=2)
-    for y in range(0, screen_height):
-        frame_y = y * frame_height // screen_height
-        for x in range(0, screen_width):
-            frame_x = x * frame_width // screen_width
-            if __rgba_buffer__ is None or (
-                __rgba_buffer__[frame_y][frame_x] != frame[frame_y][frame_x]
-            ):
-                r, g, b, a = frame[frame_y][frame_x]
-                frame_buffer.append(
-                    "\x1b[%d;%dH\x1b[38;2;%d;%d;%d;%dm█"
-                    % (y + 1, x + 1, r, g, b, a // 255)
-                )
-    __rgba_buffer__ = frame
-    print(end="".join(frame_buffer))
+    if frame:
+        global __screen_width__, __screen_height__, __rgba_buffer__, __time_counter__
+        screen_width, screen_height = os.get_terminal_size()
+        frame_width, frame_height = len(frame[0]), len(frame)
+        frame_buffer: list[str] = []
+        if __screen_width__ != screen_width or __screen_height__ != screen_height:
+            __screen_width__ = screen_width
+            __screen_height__ = screen_height
+            __rgba_buffer__ = None
+            clear_screen(mode=2)
+        for y in range(0, screen_height):
+            frame_y = y * frame_height // screen_height
+            for x in range(0, screen_width):
+                frame_x = x * frame_width // screen_width
+                if __rgba_buffer__ is None or (
+                    __rgba_buffer__[frame_y][frame_x] != frame[frame_y][frame_x]
+                ):
+                    r, g, b, a = frame[frame_y][frame_x]
+                    frame_buffer.append(
+                        "\x1b[%d;%dH\x1b[38;2;%d;%d;%d;%dm█"
+                        % (y + 1, x + 1, r, g, b, a // 255)
+                    )
+        __rgba_buffer__ = frame
+        print(end="".join(frame_buffer))
     time.sleep(
         max(
             0,
