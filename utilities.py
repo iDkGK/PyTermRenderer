@@ -263,23 +263,34 @@ class Camera(object):
             keyboard.hook_key("r", reset)
         # Rotation
         if mouse is not None:
-            from mouse import ButtonEvent, WheelEvent, MoveEvent  # type: ignore
+            from mouse import ButtonEvent, WheelEvent, MoveEvent, UP, DOWN, RIGHT  # type: ignore
 
-            mouse_position = (self._screen_width, self._screen_height)
+            roll_state = False
             rotate_lock = Lock()
-            mouse.move(*mouse_position)  # type: ignore
 
-            def rotate(event: ButtonEvent | WheelEvent | MoveEvent):
-                nonlocal mouse_position
-                if type(event) == MoveEvent:
-                    mouse_x, mouse_y = mouse_position
-                    mouse.move(mouse_x, mouse_y)  # type: ignore
-                    if rotate_lock.acquire(blocking=False):
+            def rotate(event: ButtonEvent | WheelEvent | MoveEvent) -> None:
+                nonlocal roll_state
+                if not rotate_lock.acquire(blocking=False):
+                    return
+                while mouse.get_position() != (self._screen_width, self._screen_height):
+                    mouse.move(self._screen_width, self._screen_height)  # type: ignore
+                if type(event) == ButtonEvent:
+                    if event.button == RIGHT:  # type: ignore
+                        if event.event_type == DOWN:  # type: ignore
+                            roll_state = True
+                        elif event.event_type == UP:  # type: ignore
+                            roll_state = False
+                elif type(event) == MoveEvent:
+                    if roll_state:
                         self._rotate(
-                            yaw=-(event.y - mouse_y) / 27,  # type: ignore
-                            pitch=+(event.x - mouse_x) / 27,  # type: ignore
+                            roll=+(event.x - self._screen_width) / 72,  # type: ignore
                         )
-                        rotate_lock.release()
+                    else:
+                        self._rotate(
+                            yaw=-(event.y - self._screen_height) / 72,  # type: ignore
+                            pitch=+(event.x - self._screen_width) / 72,  # type: ignore
+                        )
+                rotate_lock.release()
 
             mouse.hook(rotate)  # type: ignore
         # With custom `KeyboardListener` as fallback
