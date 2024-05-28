@@ -459,8 +459,11 @@ class Camera(object):
             def rotate(event: ButtonEvent | WheelEvent | MoveEvent) -> None:
                 if not rotate_lock.acquire(blocking=False):
                     return
-                while mouse.get_position() != (self._screen_width, self._screen_height):
-                    mouse.move(self._screen_width, self._screen_height)  # type: ignore
+                while True:
+                    if mouse.get_position() != (self._screen_width, self._screen_height):  # type: ignore
+                        mouse.move(self._screen_width, self._screen_height)  # type: ignore
+                    else:
+                        break
                 if type(event) == MoveEvent:
                     self._rotate(
                         yaw=-(event.y - self._screen_height) / 72,  # type: ignore
