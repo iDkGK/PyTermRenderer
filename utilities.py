@@ -8,218 +8,30 @@ from hintings import FrameType, Point3DType, RotationType, Vertex3DType, Triangl
 
 
 class VertexUtils(object):
-
     @staticmethod
-    def get_mesh_line(
-        vertices: tuple[tuple[float, float], tuple[float, float], tuple[float, float]],
-        left: int,
-        right: int,
-        top: int,
-        bottom: int,
-    ) -> set[tuple[int, int]]:
-        (x1, y1), (x2, y2), (x3, y3) = vertices
-        x1_int, x2_int, x3_int = int(x1), int(x2), int(x3)
-        y1_int, y2_int, y3_int = int(y1), int(y2), int(y3)
-        # There is a risk that the k of the line goes infinite or 0,
-        # leading to poor performance of bresenham line algorithm.
-        # TODO: fixme.
-        if False:
-            return (
-                VertexUtils.get_bresenham_line((x1_int, y1_int), (x2_int, y2_int))
-                | VertexUtils.get_bresenham_line((x2_int, y2_int), (x3_int, y3_int))
-                | VertexUtils.get_bresenham_line((x3_int, y3_int), (x1_int, y1_int))
+    def sort_counterclockwisely(
+        vertex_a: tuple[float, float],
+        vertex_b: tuple[float, float],
+        vertex_c: tuple[float, float],
+    ) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int]]:
+        # Sort the vertices counterclockwisely
+        vertex_a, vertex_b, vertex_c = sorted(
+            (vertex_a, vertex_b, vertex_c),
+            key=lambda tuple_xy: tuple_xy[1],
+            reverse=True,
+        )
+        if vertex_b[1] == vertex_a[1] and vertex_b[0] > vertex_a[0]:
+            vertex_a, vertex_b = vertex_b, vertex_a
+        else:
+            vertex_b, vertex_c = sorted(
+                (vertex_b, vertex_c),
+                key=lambda tuple_xy: tuple_xy[0],
             )
-        # TODO: optimize code below.
-        # Vertex A and vertex B
-        if x1 == x2 and y1 == y2:
-            if x1 < left or x1 > right or y1 < bottom or y1 > top:
-                line12 = set()
-            else:
-                line12: set[tuple[int, int]] = set([(x1_int, x2_int)])
-        else:
-            if x1 == x2 and y1 != y2:
-                y_min, y_max = sorted((y1, y2))
-                if y_min > top or y_max < bottom:
-                    line12 = set()
-                else:
-                    if x1 < left or x1 > right:
-                        line12 = set()
-                    else:
-                        line12 = VertexUtils.get_bresenham_line(
-                            (x1_int, int(max(y_min, bottom))),
-                            (x1_int, int(min(y_max, top)) + 1),
-                        )
-            elif x1 != x2 and y1 == y2:
-                x_min, x_max = sorted((x1, x2))
-                if x_min > right or x_max < left:
-                    line12 = set()
-                else:
-                    if y1 < bottom or y1 > top:
-                        line12 = set()
-                    else:
-                        line12 = VertexUtils.get_bresenham_line(
-                            (int(max(x_min, left)), y1_int),
-                            (int(min(x_max, right)) + 1, y1_int),
-                        )
-            else:
-                k12 = (y2 - y1) / (x2 - x1)
-                b12 = y1 - k12 * x1
-                x_min, x_max = sorted((x1, x2))
-                if k12 > 0:
-                    left_bottom = (bottom - b12) / k12
-                    right_top = (top - b12) / k12
-                    x_min = max(x_min, left, left_bottom)
-                    x_max = min(x_max, right, right_top)
-                    vertex1 = (
-                        int(x_min),
-                        int((x_min - x2) * (y2 - y1) / (x2 - x1) + y2),
-                    )
-                    vertex2 = (
-                        int(x_max),
-                        int((x_max - x2) * (y2 - y1) / (x2 - x1) + y2),
-                    )
-                else:
-                    left_top = (top - b12) / k12
-                    right_bottom = (bottom - b12) / k12
-                    x_min = max(x_min, left, left_top)
-                    x_max = min(x_max, right, right_bottom)
-                    vertex1 = (
-                        int(x_min),
-                        int((x_min - x2) * (y2 - y1) / (x2 - x1) + y2),
-                    )
-                    vertex2 = (
-                        int(x_max),
-                        int((x_max - x2) * (y2 - y1) / (x2 - x1) + y2),
-                    )
-                line12 = VertexUtils.get_bresenham_line(vertex1, vertex2)
-        # Vertex B and vertex C
-        if x2 == x3 and y2 == y3:
-            if x2 < left or x2 > right or y2 < bottom or y2 > top:
-                line23 = set()
-            else:
-                line23: set[tuple[int, int]] = set([(x2_int, x3_int)])
-        else:
-            if x2 == x3 and y2 != y3:
-                y_min, y_max = sorted((y2, y3))
-                if y_min > top or y_max < bottom:
-                    line23 = set()
-                else:
-                    if x2 < left or x2 > right:
-                        line23 = set()
-                    else:
-                        line23 = VertexUtils.get_bresenham_line(
-                            (x2_int, int(max(y_min, bottom))),
-                            (x2_int, int(min(y_max, top)) + 1),
-                        )
-            elif x2 != x3 and y2 == y3:
-                x_min, x_max = sorted((x2, x3))
-                if x_min > right or x_max < left:
-                    line23 = set()
-                else:
-                    if y2 < bottom or y2 > top:
-                        line23 = set()
-                    else:
-                        line23 = VertexUtils.get_bresenham_line(
-                            (int(max(x_min, left)), y2_int),
-                            (int(min(x_max, right)) + 1, y2_int),
-                        )
-            else:
-                k23 = (y3 - y2) / (x3 - x2)
-                b23 = y2 - k23 * x2
-                x_min, x_max = sorted((x2, x3))
-                if k23 > 0:
-                    left_bottom = (bottom - b23) / k23
-                    right_top = (top - b23) / k23
-                    x_min = max(x_min, left, left_bottom)
-                    x_max = min(x_max, right, right_top)
-                    vertex2 = (
-                        int(x_min),
-                        int((x_min - x3) * (y3 - y2) / (x3 - x2) + y3),
-                    )
-                    vertex3 = (
-                        int(x_max),
-                        int((x_max - x3) * (y3 - y2) / (x3 - x2) + y3),
-                    )
-                else:
-                    left_top = (top - b23) / k23
-                    right_bottom = (bottom - b23) / k23
-                    x_min = max(x_min, left, left_top)
-                    x_max = min(x_max, right, right_bottom)
-                    vertex2 = (
-                        int(x_min),
-                        int((x_min - x3) * (y3 - y2) / (x3 - x2) + y3),
-                    )
-                    vertex3 = (
-                        int(x_max),
-                        int((x_max - x3) * (y3 - y2) / (x3 - x2) + y3),
-                    )
-                line23 = VertexUtils.get_bresenham_line(vertex2, vertex3)
-        # Vertex C and vertex A
-        if x3 == x1 and y3 == y1:
-            if x3 < left or x3 > right or y3 < bottom or y3 > top:
-                line31 = set()
-            else:
-                line31: set[tuple[int, int]] = set([(x3_int, x1_int)])
-        else:
-            if x3 == x1 and y3 != y1:
-                y_min, y_max = sorted((y3, y1))
-                if y_min > top or y_max < bottom:
-                    line31 = set()
-                else:
-                    if x3 < left or x3 > right:
-                        line31 = set()
-                    else:
-                        line31 = VertexUtils.get_bresenham_line(
-                            (x3_int, int(max(y_min, bottom))),
-                            (x3_int, int(min(y_max, top)) + 1),
-                        )
-            elif x3 != x1 and y3 == y1:
-                x_min, x_max = sorted((x3, x1))
-                if x_min > right or x_max < left:
-                    line31 = set()
-                else:
-                    if y3 < bottom or y3 > top:
-                        line31 = set()
-                    else:
-                        line31 = VertexUtils.get_bresenham_line(
-                            (int(max(x_min, left)), y3_int),
-                            (int(min(x_max, right)) + 1, y3_int),
-                        )
-            else:
-                k31 = (y1 - y3) / (x1 - x3)
-                b31 = y3 - k31 * x3
-                x_min, x_max = sorted((x3, x1))
-                if k31 > 0:
-                    left_bottom = (bottom - b31) / k31
-                    right_top = (top - b31) / k31
-                    x_min = max(x_min, left, left_bottom)
-                    x_max = min(x_max, right, right_top)
-                    vertex3 = (
-                        int(x_min),
-                        int((x_min - x1) * (y1 - y3) / (x1 - x3) + y1),
-                    )
-                    vertex1 = (
-                        int(x_max),
-                        int((x_max - x1) * (y1 - y3) / (x1 - x3) + y1),
-                    )
-                else:
-                    left_top = (top - b31) / k31
-                    right_bottom = (bottom - b31) / k31
-                    x_min = max(x_min, left, left_top)
-                    x_max = min(x_max, right, right_bottom)
-                    vertex3 = (
-                        int(x_min),
-                        int((x_min - x1) * (y1 - y3) / (x1 - x3) + y1),
-                    )
-                    vertex1 = (
-                        int(x_max),
-                        int((x_max - x1) * (y1 - y3) / (x1 - x3) + y1),
-                    )
-                line31 = VertexUtils.get_bresenham_line(vertex3, vertex1)
-        return line12 | line23 | line31
+        (x_a, y_a), (x_b, y_b), (x_c, y_c) = vertex_a, vertex_b, vertex_c
+        return ((int(x_a), int(y_a)), (int(x_b), int(y_b)), (int(x_c), int(y_c)))
 
     @staticmethod
-    def get_bresenham_line(
+    def bresenham_line(
         vertex1: tuple[int, int], vertex2: tuple[int, int]
     ) -> set[tuple[int, int]]:
         # Bresenham line algorithm
@@ -244,25 +56,186 @@ class VertexUtils(object):
         return line
 
     @staticmethod
-    def sort_counterclockwisely(
-        vertex_a: tuple[float, float],
-        vertex_b: tuple[float, float],
-        vertex_c: tuple[float, float],
-    ) -> tuple[tuple[float, float], tuple[float, float], tuple[float, float]]:
-        # Sort the vertices counterclockwisely
-        vertex_a, vertex_b, vertex_c = sorted(
-            (vertex_a, vertex_b, vertex_c),
-            key=lambda tuple_xy: tuple_xy[1],
-            reverse=True,
+    def get_mesh_line_simple(
+        vertices: tuple[tuple[int, int], tuple[int, int], tuple[int, int]],
+    ) -> set[tuple[int, int]]:
+        (x1, y1), (x2, y2), (x3, y3) = vertices
+        # There is a risk that the k of the line goes infinite or 0,
+        # leading to poor performance of bresenham line algorithm.
+        # TODO: fixme.
+        return (
+            VertexUtils.bresenham_line((x1, y1), (x2, y2))
+            | VertexUtils.bresenham_line((x2, y2), (x3, y3))
+            | VertexUtils.bresenham_line((x3, y3), (x1, y1))
         )
-        if vertex_b[1] == vertex_a[1] and vertex_b[0] > vertex_a[0]:
-            vertex_a, vertex_b = vertex_b, vertex_a
+
+    @staticmethod
+    def get_mesh_line(
+        vertices: tuple[tuple[int, int], tuple[int, int], tuple[int, int]],
+        left: int,
+        right: int,
+        top: int,
+        bottom: int,
+    ) -> set[tuple[int, int]]:
+        (x1, y1), (x2, y2), (x3, y3) = vertices
+        # TODO: optimize code below.
+        # Vertex A and vertex B
+        if x1 == x2 and y1 == y2:
+            if left <= x1 <= right and bottom <= y1 <= top:
+                line12: set[tuple[int, int]] = set(((x1, x2),))
+            else:
+                line12 = set()
         else:
-            vertex_b, vertex_c = sorted(
-                (vertex_b, vertex_c),
-                key=lambda tuple_xy: tuple_xy[0],
-            )
-        return (vertex_a, vertex_b, vertex_c)
+            if x1 == x2 and y1 != y2:
+                y_min, y_max = sorted((y1, y2))
+                if bottom <= y_min <= y_max <= top:
+                    if left <= x1 <= right:
+                        vertex1 = (x1, max(y_min, bottom))
+                        vertex2 = (x1, min(y_max, top))
+                        line12 = VertexUtils.bresenham_line(vertex1, vertex2)
+                    else:
+                        line12 = set()
+                else:
+                    line12 = set()
+            elif x1 != x2 and y1 == y2:
+                x_min, x_max = sorted((x1, x2))
+                if left <= x_min <= x_max <= right:
+                    if bottom <= y1 <= top:
+                        vertex1 = (max(x_min, left), y1)
+                        vertex2 = (min(x_max, right), y1)
+                        line12 = VertexUtils.bresenham_line(vertex1, vertex2)
+                    else:
+                        line12 = set()
+                else:
+                    line12 = set()
+            else:
+                k12 = (y2 - y1) / (x2 - x1)
+                b12 = y1 - k12 * x1
+                x_min, x_max = sorted((x1, x2))
+                if k12 > 0:
+                    left_bottom = (bottom - b12) / k12
+                    right_top = (top - b12) / k12
+                    x_min = max(x_min, left, left_bottom)
+                    x_max = min(x_max, right, right_top)
+                else:
+                    left_top = (top - b12) / k12
+                    right_bottom = (bottom - b12) / k12
+                    x_min = max(x_min, left, left_top)
+                    x_max = min(x_max, right, right_bottom)
+                vertex1 = (
+                    int(x_min),
+                    int((x_min - x2) * (y2 - y1) / (x2 - x1) + y2),
+                )
+                vertex2 = (
+                    int(x_max),
+                    int((x_max - x2) * (y2 - y1) / (x2 - x1) + y2),
+                )
+                line12 = VertexUtils.bresenham_line(vertex1, vertex2)
+        # Vertex B and vertex C
+        if x2 == x3 and y2 == y3:
+            if left <= x2 <= right and bottom <= y2 <= top:
+                line23: set[tuple[int, int]] = set(((x2, x3),))
+            else:
+                line23 = set()
+        else:
+            if x2 == x3 and y2 != y3:
+                y_min, y_max = sorted((y2, y3))
+                if bottom <= y_min <= y_max <= top:
+                    if left <= x2 <= right:
+                        vertex2 = (x2, max(y_min, bottom))
+                        vertex3 = (x2, min(y_max, top))
+                        line23 = VertexUtils.bresenham_line(vertex2, vertex3)
+                    else:
+                        line23 = set()
+                else:
+                    line23 = set()
+            elif x2 != x3 and y2 == y3:
+                x_min, x_max = sorted((x2, x3))
+                if left <= x_min <= x_max <= right:
+                    if bottom <= y2 <= top:
+                        vertex2 = (max(x_min, left), y2)
+                        vertex3 = (min(x_max, right), y2)
+                        line23 = VertexUtils.bresenham_line(vertex2, vertex3)
+                    else:
+                        line23 = set()
+                else:
+                    line23 = set()
+            else:
+                k23 = (y3 - y2) / (x3 - x2)
+                b23 = y2 - k23 * x2
+                x_min, x_max = sorted((x2, x3))
+                if k23 > 0:
+                    left_bottom = (bottom - b23) / k23
+                    right_top = (top - b23) / k23
+                    x_min = max(x_min, left, left_bottom)
+                    x_max = min(x_max, right, right_top)
+                else:
+                    left_top = (top - b23) / k23
+                    right_bottom = (bottom - b23) / k23
+                    x_min = max(x_min, left, left_top)
+                    x_max = min(x_max, right, right_bottom)
+                vertex2 = (
+                    int(x_min),
+                    int((x_min - x3) * (y3 - y2) / (x3 - x2) + y3),
+                )
+                vertex3 = (
+                    int(x_max),
+                    int((x_max - x3) * (y3 - y2) / (x3 - x2) + y3),
+                )
+                line23 = VertexUtils.bresenham_line(vertex2, vertex3)
+        # Vertex C and vertex A
+        if x3 == x1 and y3 == y1:
+            if left <= x3 <= right and bottom <= y3 <= top:
+                line31: set[tuple[int, int]] = set(((x3, x1),))
+            else:
+                line31 = set()
+        else:
+            if x3 == x1 and y3 != y1:
+                y_min, y_max = sorted((y3, y1))
+                if bottom <= y_min <= y_max <= top:
+                    if left <= x3 <= right:
+                        vertex3 = (x3, max(y_min, bottom))
+                        vertex1 = (x3, min(y_max, top))
+                        line31 = VertexUtils.bresenham_line(vertex3, vertex1)
+                    else:
+                        line31 = set()
+                else:
+                    line31 = set()
+            elif x3 != x1 and y3 == y1:
+                x_min, x_max = sorted((x3, x1))
+                if left <= x_min <= x_max <= right:
+                    if bottom <= y3 <= top:
+                        vertex3 = (max(x_min, left), y3)
+                        vertex1 = (min(x_max, right), y3)
+                        line31 = VertexUtils.bresenham_line(vertex3, vertex1)
+                    else:
+                        line31 = set()
+                else:
+                    line31 = set()
+            else:
+                k31 = (y1 - y3) / (x1 - x3)
+                b31 = y3 - k31 * x3
+                x_min, x_max = sorted((x3, x1))
+                if k31 > 0:
+                    left_bottom = (bottom - b31) / k31
+                    right_top = (top - b31) / k31
+                    x_min = max(x_min, left, left_bottom)
+                    x_max = min(x_max, right, right_top)
+                else:
+                    left_top = (top - b31) / k31
+                    right_bottom = (bottom - b31) / k31
+                    x_min = max(x_min, left, left_top)
+                    x_max = min(x_max, right, right_bottom)
+                vertex3 = (
+                    int(x_min),
+                    int((x_min - x1) * (y1 - y3) / (x1 - x3) + y1),
+                )
+                vertex1 = (
+                    int(x_max),
+                    int((x_max - x1) * (y1 - y3) / (x1 - x3) + y1),
+                )
+                line31 = VertexUtils.bresenham_line(vertex3, vertex1)
+        return line12 | line23 | line31
 
 
 class Object(object):
@@ -710,31 +683,35 @@ class Camera(object):
                     triangle_c_y * self._cos_yaw + triangle_c_z * self._sin_yaw,
                     -triangle_c_y * self._sin_yaw + triangle_c_z * self._cos_yaw,
                 )
-                # Near/far plane culling
-                if (
+                # Simple near/far plane culling
+                # TODO: implement advanced near/far plane culling
+                if not (
                     self._near_plane < triangle_a_z < self._far_plane
                     and self._near_plane < triangle_b_z < self._far_plane
                     and self._near_plane < triangle_c_z < self._far_plane
                 ):
-                    # Triangle vertices on camera screen
-                    camera_triangle_vertex_a = (
-                        self._focal * triangle_a_x / triangle_a_z,
-                        self._focal * triangle_a_y / triangle_a_z,
-                    )
-                    camera_triangle_vertex_b = (
-                        self._focal * triangle_b_x / triangle_b_z,
-                        self._focal * triangle_b_y / triangle_b_z,
-                    )
-                    camera_triangle_vertex_c = (
-                        self._focal * triangle_c_x / triangle_c_z,
-                        self._focal * triangle_c_y / triangle_c_z,
-                    )
-                    # Triangle on camera screen
-                    triangle_vertices = VertexUtils.sort_counterclockwisely(
-                        vertex_a=camera_triangle_vertex_a,
-                        vertex_b=camera_triangle_vertex_b,
-                        vertex_c=camera_triangle_vertex_c,
-                    )
+                    continue
+                # Triangle vertices on camera screen
+                camera_triangle_vertex_a = (
+                    self._focal * triangle_a_x / triangle_a_z,
+                    self._focal * triangle_a_y / triangle_a_z,
+                )
+                camera_triangle_vertex_b = (
+                    self._focal * triangle_b_x / triangle_b_z,
+                    self._focal * triangle_b_y / triangle_b_z,
+                )
+                camera_triangle_vertex_c = (
+                    self._focal * triangle_c_x / triangle_c_z,
+                    self._focal * triangle_c_y / triangle_c_z,
+                )
+                # Triangle on camera screen
+                triangle_vertices = VertexUtils.sort_counterclockwisely(
+                    vertex_a=camera_triangle_vertex_a,
+                    vertex_b=camera_triangle_vertex_b,
+                    vertex_c=camera_triangle_vertex_c,
+                )
+                if True:
+                    # Culling style
                     self._lines |= VertexUtils.get_mesh_line(
                         triangle_vertices,
                         self._screen_left,
@@ -742,6 +719,9 @@ class Camera(object):
                         self._screen_top,
                         self._screen_bottom,
                     )
+                else:
+                    # No culling style
+                    self._lines |= VertexUtils.get_mesh_line_simple(triangle_vertices)
 
     def _update_infomation(self) -> None:
         self._information = [
