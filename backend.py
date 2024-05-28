@@ -6,7 +6,7 @@ from datetime import datetime
 
 from decoder import PNGSequence
 from hintings import FrameType, FramesType, RowType, EffectModeType
-from utilities import Object, Camera, SmoothCamera, PlayerCamera  # type: ignore
+from utilities import Object, Camera, SmoothCamera  # type: ignore
 
 ASCII_CHARACTERS = "".join((string.digits, string.ascii_letters, string.punctuation))
 BINARY_CHARACTERS = "01" * 32
