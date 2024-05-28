@@ -80,8 +80,8 @@ def render_frame(frame: FrameType, fps: int) -> None:
         frame (FrameType): frame buffer to render
         fps (int): fps limit. 0 means unlimited. Defaults to 0
     """
+    global __screen_width__, __screen_height__, __frame_buffer__, __time_counter__
     if frame:
-        global __screen_width__, __screen_height__, __frame_buffer__, __time_counter__
         screen_width, screen_height = os.get_terminal_size()
         frame_width, frame_height = len(frame[0]), len(frame)
         frame_buffer: list[str] = []
@@ -123,8 +123,8 @@ def render_ascii(frame: FrameType, fps: int) -> None:
         frame (FrameType): frame buffer to render
         fps (int): fps limit. 0 means unlimited. Defaults to 0
     """
+    global __screen_width__, __screen_height__, __ascii_buffer__, __time_counter__
     if frame:
-        global __screen_width__, __screen_height__, __ascii_buffer__, __time_counter__
         screen_width, screen_height = os.get_terminal_size()
         frame_width, frame_height = len(frame[0]), len(frame)
         frame_buffer: list[str] = []
@@ -182,8 +182,8 @@ def render_gray(frame: FrameType, fps: int) -> None:
         fps (int): fps limit. 0 means unlimited. Defaults to 0
         size (tuple[int, int]): target rendering size
     """
+    global __screen_width__, __screen_height__, __gray_buffer__, __time_counter__
     if frame:
-        global __screen_width__, __screen_height__, __gray_buffer__, __time_counter__
         screen_width, screen_height = os.get_terminal_size()
         frame_width, frame_height = len(frame[0]), len(frame)
         frame_buffer: list[str] = []
@@ -235,8 +235,8 @@ def render_rgba(frame: FrameType, fps: int) -> None:
         fps (int): fps limit. 0 means unlimited. Defaults to 0
         size (tuple[int, int]): target rendering size
     """
+    global __screen_width__, __screen_height__, __rgba_buffer__, __time_counter__
     if frame:
-        global __screen_width__, __screen_height__, __rgba_buffer__, __time_counter__
         screen_width, screen_height = os.get_terminal_size()
         frame_width, frame_height = len(frame[0]), len(frame)
         frame_buffer: list[str] = []
