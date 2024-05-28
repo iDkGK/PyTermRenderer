@@ -234,7 +234,7 @@ class Fake3DSceneGame(Backend):
             screen_size=os.get_terminal_size(),
             field_of_view=90,
             near_plane=0.0,
-            far_plane=1000.0,
+            far_plane=125.0,
             coordinate=(0.0, 0.0, 0.0),
             rotation=(0.0, 0.0),
         )
