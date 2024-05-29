@@ -802,7 +802,7 @@ class SmoothCamera(Camera):
         self._speed_z = 0.0
         self._move_acceleration = abs(move_acceleration)
         self._dash_acceleration = abs(dash_acceleration)
-        self._inertia_ratio = max(min(inertia_ratio, 1.0), 0.0)
+        self._inertia_ratio = max(min(inertia_ratio, 1.0), 0.0) / 200.0
         super(SmoothCamera, self).__init__(
             screen_size=screen_size,
             field_of_view=field_of_view,
@@ -866,9 +866,9 @@ class SmoothCamera(Camera):
         self._x += self._speed_x * self._delta_time
         self._y += self._speed_y * self._delta_time
         self._z += self._speed_z * self._delta_time
-        self._speed_x *= self._inertia_ratio
-        self._speed_y *= self._inertia_ratio
-        self._speed_z *= self._inertia_ratio
+        self._speed_x *= self._inertia_ratio**self._delta_time
+        self._speed_y *= self._inertia_ratio**self._delta_time
+        self._speed_z *= self._inertia_ratio**self._delta_time
 
     # Reset methods
     def _reset(self) -> None:
