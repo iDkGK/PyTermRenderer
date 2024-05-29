@@ -7,235 +7,90 @@ from threading import Lock
 from hintings import FrameType, Point3DType, RotationType, Vertex3DType, Triangle3DType
 
 
-class VertexUtils(object):
-    @staticmethod
-    def sort_counterclockwisely(
-        vertex_a: tuple[float, float],
-        vertex_b: tuple[float, float],
-        vertex_c: tuple[float, float],
-    ) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int]]:
-        # Sort the vertices counterclockwisely
-        vertex_a, vertex_b, vertex_c = sorted(
-            (vertex_a, vertex_b, vertex_c),
-            key=lambda tuple_xy: tuple_xy[1],
-            reverse=True,
+def sort_counterclockwisely(
+    vertex_a: tuple[float, float, float],
+    vertex_b: tuple[float, float, float],
+    vertex_c: tuple[float, float, float],
+) -> tuple[
+    tuple[float, float, float],
+    tuple[float, float, float],
+    tuple[float, float, float],
+]:
+    # Sort the vertices counterclockwisely
+    vertex_a, vertex_b, vertex_c = sorted(
+        (vertex_a, vertex_b, vertex_c),
+        key=lambda tuple_xy: tuple_xy[1],
+        reverse=True,
+    )
+    if vertex_b[1] == vertex_a[1] and vertex_b[0] > vertex_a[0]:
+        vertex_a, vertex_b = vertex_b, vertex_a
+    else:
+        vertex_b, vertex_c = sorted(
+            (vertex_b, vertex_c),
+            key=lambda tuple_xy: tuple_xy[0],
         )
-        if vertex_b[1] == vertex_a[1] and vertex_b[0] > vertex_a[0]:
-            vertex_a, vertex_b = vertex_b, vertex_a
-        else:
-            vertex_b, vertex_c = sorted(
-                (vertex_b, vertex_c),
-                key=lambda tuple_xy: tuple_xy[0],
-            )
-        (x_a, y_a), (x_b, y_b), (x_c, y_c) = vertex_a, vertex_b, vertex_c
-        return ((int(x_a), int(y_a)), (int(x_b), int(y_b)), (int(x_c), int(y_c)))
+    return vertex_a, vertex_b, vertex_c
 
-    @staticmethod
-    def bresenham_line(
-        vertex1: tuple[int, int], vertex2: tuple[int, int]
-    ) -> set[tuple[int, int]]:
-        # Bresenham line algorithm
-        line: set[tuple[int, int]] = set()
-        (x1, y1), (x2, y2) = vertex1, vertex2
-        delta_x = abs(x2 - x1)
-        delta_y = abs(y2 - y1)
-        step_x = 1 if x1 < x2 else -1
-        step_y = 1 if y1 < y2 else -1
-        error = delta_x - delta_y
-        while True:
-            line.add((x1, y1))
-            if x1 == x2 and y1 == y2:
-                break
-            double_error = 2 * error
-            if double_error > -delta_y:
-                error -= delta_y
-                x1 += step_x
-            if double_error < delta_x:
-                error += delta_x
-                y1 += step_y
+
+def bresenham_line(
+    vertex1: tuple[float, float, float],
+    vertex2: tuple[float, float, float],
+    border: tuple[int, int, int, int],
+) -> set[tuple[int, int]]:
+    # Bresenham line algorithm
+    line: set[tuple[int, int]] = set()
+    zbuffer: dict[tuple[int, int], float] = {}
+    left, right, top, bottom = border
+    (x1, y1, z1), (x2, y2, _) = vertex1, vertex2
+    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+    if x1 < left and y1 < bottom and x2 < left and y2 < bottom:
         return line
+    if x1 > right and y1 > top and x2 > right and y2 > top:
+        return line
+    end_coordinate = (x2, y2)
+    delta_x = abs(x2 - x1)
+    delta_y = abs(y2 - y1)
+    step_x = 1 if x1 < x2 else -1
+    step_y = 1 if y1 < y2 else -1
+    error = delta_x - delta_y
+    while True:
+        middle_coordinate = (x1, y1)
+        if (
+            zbuffer.get(middle_coordinate, 1.0) > z1
+            and left <= x1 <= right
+            and bottom <= y1 <= top
+        ):
+            line.add(middle_coordinate)
+            zbuffer[middle_coordinate] = z1
+        if middle_coordinate == end_coordinate:
+            break
+        double_error = 2 * error
+        if double_error > -delta_y:
+            error -= delta_y
+            x1 += step_x
+        if double_error < delta_x:
+            error += delta_x
+            y1 += step_y
+    return line
 
-    @staticmethod
-    def get_mesh_line_simple(
-        vertices: tuple[tuple[int, int], tuple[int, int], tuple[int, int]],
-    ) -> set[tuple[int, int]]:
-        (x_a, y_a), (x_b, y_b), (x_c, y_c) = vertices
-        # There is a risk that the k of the line goes infinite or 0,
-        # leading to poor performance of bresenham line algorithm.
-        # TODO: fixme.
-        return (
-            VertexUtils.bresenham_line((x_a, y_a), (x_b, y_b))
-            | VertexUtils.bresenham_line((x_b, y_b), (x_c, y_c))
-            | VertexUtils.bresenham_line((x_c, y_c), (x_a, y_a))
-        )
 
-    @staticmethod
-    def get_mesh_line(
-        vertices: tuple[tuple[int, int], tuple[int, int], tuple[int, int]],
-        left: int,
-        right: int,
-        top: int,
-        bottom: int,
-    ) -> set[tuple[int, int]]:
-        (x_a, y_a), (x_b, y_b), (x_c, y_c) = vertices
-        # TODO: optimize code below.
-        # Vertex A and vertex B
-        if x_a == x_b and y_a == y_b:
-            if left <= x_a <= right and bottom <= y_a <= top:
-                line_ab: set[tuple[int, int]] = set(((x_a, x_b),))
-            else:
-                line_ab = set()
-        else:
-            if x_a == x_b and y_a != y_b:
-                y_min, y_max = sorted((y_a, y_b))
-                if bottom <= y_min <= y_max <= top:
-                    if left <= x_a <= right:
-                        vertex_a = (x_a, max(y_min, bottom))
-                        vertex_b = (x_a, min(y_max, top))
-                        line_ab = VertexUtils.bresenham_line(vertex_a, vertex_b)
-                    else:
-                        line_ab = set()
-                else:
-                    line_ab = set()
-            elif x_a != x_b and y_a == y_b:
-                x_min, x_max = sorted((x_a, x_b))
-                if left <= x_min <= x_max <= right:
-                    if bottom <= y_a <= top:
-                        vertex_a = (max(x_min, left), y_a)
-                        vertex_b = (min(x_max, right), y_a)
-                        line_ab = VertexUtils.bresenham_line(vertex_a, vertex_b)
-                    else:
-                        line_ab = set()
-                else:
-                    line_ab = set()
-            else:
-                k_ab = (y_b - y_a) / (x_b - x_a)
-                b_ab = y_a - k_ab * x_a
-                x_min, x_max = sorted((x_a, x_b))
-                if k_ab > 0:
-                    left_bottom = (bottom - b_ab) / k_ab
-                    right_top = (top - b_ab) / k_ab
-                    x_min = max(x_min, left, left_bottom)
-                    x_max = min(x_max, right, right_top)
-                else:
-                    left_top = (top - b_ab) / k_ab
-                    right_bottom = (bottom - b_ab) / k_ab
-                    x_min = max(x_min, left, left_top)
-                    x_max = min(x_max, right, right_bottom)
-                vertex_a = (
-                    int(x_min),
-                    int((x_min - x_b) * (y_b - y_a) / (x_b - x_a) + y_b),
-                )
-                vertex_b = (
-                    int(x_max),
-                    int((x_max - x_b) * (y_b - y_a) / (x_b - x_a) + y_b),
-                )
-                line_ab = VertexUtils.bresenham_line(vertex_a, vertex_b)
-        # Vertex B and vertex C
-        if x_b == x_c and y_b == y_c:
-            if left <= x_b <= right and bottom <= y_b <= top:
-                line_bc: set[tuple[int, int]] = set(((x_b, x_c),))
-            else:
-                line_bc = set()
-        else:
-            if x_b == x_c and y_b != y_c:
-                y_min, y_max = sorted((y_b, y_c))
-                if bottom <= y_min <= y_max <= top:
-                    if left <= x_b <= right:
-                        vertex_b = (x_b, max(y_min, bottom))
-                        vertex_c = (x_b, min(y_max, top))
-                        line_bc = VertexUtils.bresenham_line(vertex_b, vertex_c)
-                    else:
-                        line_bc = set()
-                else:
-                    line_bc = set()
-            elif x_b != x_c and y_b == y_c:
-                x_min, x_max = sorted((x_b, x_c))
-                if left <= x_min <= x_max <= right:
-                    if bottom <= y_b <= top:
-                        vertex_b = (max(x_min, left), y_b)
-                        vertex_c = (min(x_max, right), y_b)
-                        line_bc = VertexUtils.bresenham_line(vertex_b, vertex_c)
-                    else:
-                        line_bc = set()
-                else:
-                    line_bc = set()
-            else:
-                k_bc = (y_c - y_b) / (x_c - x_b)
-                b_bc = y_b - k_bc * x_b
-                x_min, x_max = sorted((x_b, x_c))
-                if k_bc > 0:
-                    left_bottom = (bottom - b_bc) / k_bc
-                    right_top = (top - b_bc) / k_bc
-                    x_min = max(x_min, left, left_bottom)
-                    x_max = min(x_max, right, right_top)
-                else:
-                    left_top = (top - b_bc) / k_bc
-                    right_bottom = (bottom - b_bc) / k_bc
-                    x_min = max(x_min, left, left_top)
-                    x_max = min(x_max, right, right_bottom)
-                vertex_b = (
-                    int(x_min),
-                    int((x_min - x_c) * (y_c - y_b) / (x_c - x_b) + y_c),
-                )
-                vertex_c = (
-                    int(x_max),
-                    int((x_max - x_c) * (y_c - y_b) / (x_c - x_b) + y_c),
-                )
-                line_bc = VertexUtils.bresenham_line(vertex_b, vertex_c)
-        # Vertex C and vertex A
-        if x_c == x_a and y_c == y_a:
-            if left <= x_c <= right and bottom <= y_c <= top:
-                line_ca: set[tuple[int, int]] = set(((x_c, x_a),))
-            else:
-                line_ca = set()
-        else:
-            if x_c == x_a and y_c != y_a:
-                y_min, y_max = sorted((y_c, y_a))
-                if bottom <= y_min <= y_max <= top:
-                    if left <= x_c <= right:
-                        vertex_c = (x_c, max(y_min, bottom))
-                        vertex_a = (x_c, min(y_max, top))
-                        line_ca = VertexUtils.bresenham_line(vertex_c, vertex_a)
-                    else:
-                        line_ca = set()
-                else:
-                    line_ca = set()
-            elif x_c != x_a and y_c == y_a:
-                x_min, x_max = sorted((x_c, x_a))
-                if left <= x_min <= x_max <= right:
-                    if bottom <= y_c <= top:
-                        vertex_c = (max(x_min, left), y_c)
-                        vertex_a = (min(x_max, right), y_c)
-                        line_ca = VertexUtils.bresenham_line(vertex_c, vertex_a)
-                    else:
-                        line_ca = set()
-                else:
-                    line_ca = set()
-            else:
-                k_ca = (y_a - y_c) / (x_a - x_c)
-                b_ca = y_c - k_ca * x_c
-                x_min, x_max = sorted((x_c, x_a))
-                if k_ca > 0:
-                    left_bottom = (bottom - b_ca) / k_ca
-                    right_top = (top - b_ca) / k_ca
-                    x_min = max(x_min, left, left_bottom)
-                    x_max = min(x_max, right, right_top)
-                else:
-                    left_top = (top - b_ca) / k_ca
-                    right_bottom = (bottom - b_ca) / k_ca
-                    x_min = max(x_min, left, left_top)
-                    x_max = min(x_max, right, right_bottom)
-                vertex_c = (
-                    int(x_min),
-                    int((x_min - x_a) * (y_a - y_c) / (x_a - x_c) + y_a),
-                )
-                vertex_a = (
-                    int(x_max),
-                    int((x_max - x_a) * (y_a - y_c) / (x_a - x_c) + y_a),
-                )
-                line_ca = VertexUtils.bresenham_line(vertex_c, vertex_a)
-        return line_ab | line_bc | line_ca
+def get_mesh_line(
+    vertices: tuple[
+        tuple[float, float, float],
+        tuple[float, float, float],
+        tuple[float, float, float],
+    ],
+    border: tuple[int, int, int, int],
+) -> set[tuple[int, int]]:
+    vertex_a, vertex_b, vertex_c = vertices
+    # There is a risk that the k of the line goes infinite or 0,
+    # leading to poor performance of bresenham line algorithm.
+    # TODO: fixme.
+    return (
+        bresenham_line(vertex_a, vertex_b, border)
+        | bresenham_line(vertex_b, vertex_c, border)
+        | bresenham_line(vertex_c, vertex_a, border)
+    )
 
 
 class Object(object):
@@ -335,11 +190,9 @@ class Camera(object):
             self._screen_width // 2,
             self._screen_height // 2,
         )
-        self._screen_left, self._screen_right = (
+        self._screen_border = (
             -self._half_width,
             self._screen_width - self._half_width,
-        )
-        self._screen_top, self._screen_bottom = (
             self._screen_height - self._half_height,
             -self._half_height,
         )
@@ -355,6 +208,7 @@ class Camera(object):
         )
         self._near_plane = near_plane
         self._far_plane = far_plane
+        self._screen_depth = far_plane - near_plane
         self._x, self._y, self._z = coordinate
         self._original_coordinate = coordinate
         self._yaw, self._pitch = rotation
@@ -698,34 +552,25 @@ class Camera(object):
                 camera_triangle_vertex_a = (
                     self._focal * triangle_a_x / triangle_a_z,
                     self._focal * triangle_a_y / triangle_a_z,
+                    triangle_a_z / self._screen_depth,
                 )
                 camera_triangle_vertex_b = (
                     self._focal * triangle_b_x / triangle_b_z,
                     self._focal * triangle_b_y / triangle_b_z,
+                    triangle_b_z / self._screen_depth,
                 )
                 camera_triangle_vertex_c = (
                     self._focal * triangle_c_x / triangle_c_z,
                     self._focal * triangle_c_y / triangle_c_z,
+                    triangle_c_z / self._screen_depth,
                 )
                 # Triangle on camera screen
-                triangle_vertices = VertexUtils.sort_counterclockwisely(
+                triangle_vertices = sort_counterclockwisely(
                     vertex_a=camera_triangle_vertex_a,
                     vertex_b=camera_triangle_vertex_b,
                     vertex_c=camera_triangle_vertex_c,
                 )
-                if True:
-                    # Culling style
-                    self._lines |= VertexUtils.get_mesh_line(
-                        triangle_vertices,
-                        self._screen_left,
-                        self._screen_right,
-                        self._screen_top,
-                        self._screen_bottom,
-                    )
-                else:
-                    # No culling style. For debugging only.
-                    # Performance issues are expected.
-                    self._lines |= VertexUtils.get_mesh_line_simple(triangle_vertices)
+                self._lines |= get_mesh_line(triangle_vertices, self._screen_border)
 
     def _update_infomation(self, delta_time: float) -> None:
         self._information = [
