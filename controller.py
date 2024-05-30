@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import atexit
+
 try:
     from msvcrt import getwch  # type: ignore
 except ImportError:
@@ -6,13 +8,16 @@ except ImportError:
     import termios
     import tty
 
-    _stdin_old_attributes = termios.tcgetattr(sys.stdin.fileno())  # type: ignore
+    _stdin_attributes = termios.tcgetattr(sys.stdin.fileno())  # type: ignore
+    _stdin_attributes[3] &= ~termios.ECHO  # suppress echo  # type: ignore
+    termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, _stdin_attributes)  # type: ignore
 
     def _reset_stdin_tty() -> None:
+        _stdin_attributes[3] |= termios.ECHO  # type: ignore
         termios.tcsetattr(  # type: ignore
             sys.stdin.fileno(),
-            termios.TCSADRAIN,  # type: ignore
-            _stdin_old_attributes,
+            termios.TCSANOW,  # type: ignore
+            _stdin_attributes,
         )
 
     def getwch() -> str:
@@ -21,8 +26,9 @@ except ImportError:
         """
         tty.setraw(sys.stdin.fileno())  # type: ignore
         character = sys.stdin.read(1)
-        _reset_stdin_tty()
         return character
+
+    atexit.register(_reset_stdin_tty)
 
 
 from queue import LifoQueue
