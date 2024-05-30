@@ -8,13 +8,13 @@ from hintings import FrameType, Point3DType, RotationType, Vertex3DType, Triangl
 
 
 def sort_counterclockwisely(
-    vertex_a: tuple[float, float, float],
-    vertex_b: tuple[float, float, float],
-    vertex_c: tuple[float, float, float],
+    vertex_a: tuple[float, float],
+    vertex_b: tuple[float, float],
+    vertex_c: tuple[float, float],
 ) -> tuple[
-    tuple[float, float, float],
-    tuple[float, float, float],
-    tuple[float, float, float],
+    tuple[float, float],
+    tuple[float, float],
+    tuple[float, float],
 ]:
     # Sort the vertices counterclockwisely
     vertex_a, vertex_b, vertex_c = sorted(
@@ -33,19 +33,20 @@ def sort_counterclockwisely(
 
 
 def bresenham_line(
-    vertex1: tuple[float, float, float],
-    vertex2: tuple[float, float, float],
+    vertex1: tuple[float, float],
+    vertex2: tuple[float, float],
     border: tuple[int, int, int, int],
 ) -> set[tuple[int, int]]:
     # Bresenham line algorithm
     line: set[tuple[int, int]] = set()
-    zbuffer: dict[tuple[int, int], float] = {}
     left, right, top, bottom = border
-    (x1, y1, z1), (x2, y2, _) = vertex1, vertex2
-    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-    if x1 < left and y1 < bottom and x2 < left and y2 < bottom:
-        return line
-    if x1 > right and y1 > top and x2 > right and y2 > top:
+    x1, y1, x2, y2 = map(int, (*vertex1, *vertex2))
+    if (
+        (x1 < left and x2 < left)
+        or (x1 > right or x2 > right)
+        or (y1 < bottom and y2 < bottom)
+        or (y1 > top and y2 > top)
+    ):
         return line
     end_coordinate = (x2, y2)
     delta_x = abs(x2 - x1)
@@ -55,13 +56,8 @@ def bresenham_line(
     error = delta_x - delta_y
     while True:
         middle_coordinate = (x1, y1)
-        if (
-            zbuffer.get(middle_coordinate, 1.0) > z1
-            and left <= x1 <= right
-            and bottom <= y1 <= top
-        ):
+        if left <= x1 <= right and bottom <= y1 <= top:
             line.add(middle_coordinate)
-            zbuffer[middle_coordinate] = z1
         if middle_coordinate == end_coordinate:
             break
         double_error = 2 * error
@@ -76,9 +72,9 @@ def bresenham_line(
 
 def get_mesh_line(
     vertices: tuple[
-        tuple[float, float, float],
-        tuple[float, float, float],
-        tuple[float, float, float],
+        tuple[float, float],
+        tuple[float, float],
+        tuple[float, float],
     ],
     border: tuple[int, int, int, int],
 ) -> set[tuple[int, int]]:
@@ -552,17 +548,14 @@ class Camera(object):
                 camera_triangle_vertex_a = (
                     self._focal * triangle_a_x / triangle_a_z,
                     self._focal * triangle_a_y / triangle_a_z,
-                    triangle_a_z / self._screen_depth,
                 )
                 camera_triangle_vertex_b = (
                     self._focal * triangle_b_x / triangle_b_z,
                     self._focal * triangle_b_y / triangle_b_z,
-                    triangle_b_z / self._screen_depth,
                 )
                 camera_triangle_vertex_c = (
                     self._focal * triangle_c_x / triangle_c_z,
                     self._focal * triangle_c_y / triangle_c_z,
-                    triangle_c_z / self._screen_depth,
                 )
                 # Triangle on camera screen
                 triangle_vertices = sort_counterclockwisely(
