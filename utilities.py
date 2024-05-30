@@ -574,20 +574,19 @@ class Camera(object):
 
     def _update_infomation(self, delta_time: float) -> None:
         self._information = [
-            *(("".ljust(self._screen_width),) * self._screen_height),
-            ("FOV: %f" % self._field_of_view).ljust(self._screen_width),
-            ("Coordinate (X, Y, Z): (%f, %f, %f)" % (self._x, self._y, self._z)).ljust(
-                self._screen_width
-            ),
-            ("Rotation (Yaw, Pitch): (%f, %f)" % (self._yaw, self._pitch)).ljust(
+            *(("".rjust(self._screen_width),) * (self._screen_height - 4)),
+            ("FOV: %f" % self._field_of_view).rjust(self._screen_width),
+            ("Rotation (Yaw, Pitch): (%f, %f)" % (self._yaw, self._pitch)).rjust(
                 self._screen_width
             ),
             (
                 "Direction vector (X, Z): (%f, %f, %f)"
                 % (self._vector_x, self._vector_y, self._vector_z)
-            ).ljust(self._screen_width),
+            ).rjust(self._screen_width),
+            ("Coordinate (X, Y, Z): (%f, %f, %f)" % (self._x, self._y, self._z)).rjust(
+                self._screen_width
+            ),
         ]
-        self._information.reverse()
 
     def update(self, delta_time: float = 0.0) -> None:
         self._update_position(delta_time)
