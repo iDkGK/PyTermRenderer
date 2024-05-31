@@ -572,10 +572,12 @@ class Camera(object):
             ("Rotation (Yaw, Pitch): (%f, %f)" % (self._yaw, self._pitch)).rjust(
                 self._screen_width
             ),
-            (
-                "Direction vector (X, Z): (%f, %f, %f)"
-                % (self._vector_x, self._vector_y, self._vector_z)
-            ).rjust(self._screen_width),
+            # There's no need to display direction vector
+            # Display it only for debugging case.
+            # (
+            #     "Direction vector (X, Z): (%f, %f, %f)"
+            #     % (self._vector_x, self._vector_y, self._vector_z)
+            # ).rjust(self._screen_width),
             ("Coordinate (X, Y, Z): (%f, %f, %f)" % (self._x, self._y, self._z)).rjust(
                 self._screen_width
             ),
