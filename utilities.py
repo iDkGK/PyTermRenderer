@@ -24,34 +24,6 @@ from hintings import (
 )
 
 
-def sort_counterclockwisely(
-    vertex_texture_a: Vertex3DTexture2DNormal3DType,
-    vertex_texture_b: Vertex3DTexture2DNormal3DType,
-    vertex_texture_c: Vertex3DTexture2DNormal3DType,
-) -> tuple[
-    Vertex3DTexture2DNormal3DType,
-    Vertex3DTexture2DNormal3DType,
-    Vertex3DTexture2DNormal3DType,
-]:
-    # Sort the vertices counterclockwisely
-    vertex_texture_a, vertex_texture_b, vertex_texture_c = sorted(
-        (vertex_texture_a, vertex_texture_b, vertex_texture_c),
-        key=lambda tuple_xy: tuple_xy[1],
-        reverse=True,
-    )
-    if (
-        vertex_texture_b[1] == vertex_texture_a[1]
-        and vertex_texture_b[0] > vertex_texture_a[0]
-    ):
-        vertex_texture_a, vertex_texture_b = vertex_texture_b, vertex_texture_a
-    else:
-        vertex_texture_b, vertex_texture_c = sorted(
-            (vertex_texture_b, vertex_texture_c),
-            key=lambda tuple_xy: tuple_xy[0],
-        )
-    return vertex_texture_a, vertex_texture_b, vertex_texture_c
-
-
 def get_line_bresenham(
     vertex_texture1: Vertex3DTexture2DNormal3DType,
     vertex_texture2: Vertex3DTexture2DNormal3DType,
@@ -723,11 +695,6 @@ class Camera(object):
                     normal_c_x,
                     normal_c_y,
                     normal_c_z,
-                )
-                vertex_texture_a, vertex_texture_b, vertex_texture_c = (
-                    sort_counterclockwisely(
-                        vertex_texture_a, vertex_texture_b, vertex_texture_c
-                    )
                 )
                 self._pixels |= self._selected_render_function(
                     vertex_texture_a,
