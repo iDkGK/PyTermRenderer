@@ -25,7 +25,7 @@ from hintings import (
 
 
 def sort_counterclockwisely(
-    vertex_textuure_a: Vertex3DTexture2DNormal3DType,
+    vertex_texture_a: Vertex3DTexture2DNormal3DType,
     vertex_texture_b: Vertex3DTexture2DNormal3DType,
     vertex_texture_c: Vertex3DTexture2DNormal3DType,
 ) -> tuple[
@@ -34,22 +34,22 @@ def sort_counterclockwisely(
     Vertex3DTexture2DNormal3DType,
 ]:
     # Sort the vertices counterclockwisely
-    vertex_textuure_a, vertex_texture_b, vertex_texture_c = sorted(
-        (vertex_textuure_a, vertex_texture_b, vertex_texture_c),
+    vertex_texture_a, vertex_texture_b, vertex_texture_c = sorted(
+        (vertex_texture_a, vertex_texture_b, vertex_texture_c),
         key=lambda tuple_xy: tuple_xy[1],
         reverse=True,
     )
     if (
-        vertex_texture_b[1] == vertex_textuure_a[1]
-        and vertex_texture_b[0] > vertex_textuure_a[0]
+        vertex_texture_b[1] == vertex_texture_a[1]
+        and vertex_texture_b[0] > vertex_texture_a[0]
     ):
-        vertex_textuure_a, vertex_texture_b = vertex_texture_b, vertex_textuure_a
+        vertex_texture_a, vertex_texture_b = vertex_texture_b, vertex_texture_a
     else:
         vertex_texture_b, vertex_texture_c = sorted(
             (vertex_texture_b, vertex_texture_c),
             key=lambda tuple_xy: tuple_xy[0],
         )
-    return vertex_textuure_a, vertex_texture_b, vertex_texture_c
+    return vertex_texture_a, vertex_texture_b, vertex_texture_c
 
 
 def get_line_bresenham(
@@ -116,6 +116,7 @@ def get_textured_triangles(
     texture: ImageType,
     border: tuple[int, int, int, int],
 ) -> dict[PixelCoordinateType, PixelDataType]:
+
     return {}
 
 
