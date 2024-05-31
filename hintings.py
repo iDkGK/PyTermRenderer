@@ -14,7 +14,16 @@ ImagesType = Iterable[ImageType]
 Point3DType = tuple[float, float, float]
 RotationType = tuple[float, float]
 Vertex3DType = tuple[float, float, float]
-Triangle3DType = tuple[Vertex3DType, Vertex3DType, Vertex3DType]
+TriangleVerticesType = tuple[Vertex3DType, Vertex3DType, Vertex3DType]
+Texture2DType = tuple[float, float]
+TriangleTexturesType = tuple[Texture2DType, Texture2DType, Texture2DType]
+Normal3DType = tuple[float, float, float]
+TriangleNormalsType = tuple[Normal3DType, Normal3DType, Normal3DType]
+Vertex3DTexture2DNormal3DType = tuple[
+    float, float, float, float, float, float, float, float
+]
+PixelCoordinateType = tuple[int, int]
+PixelDataType = tuple[int, int, int, int, int]
 
 # Others
 EffectModeType = Literal["ascii", "binary", "short", "standard", "long"]

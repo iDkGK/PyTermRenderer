@@ -5,43 +5,64 @@ import warnings
 from pathlib import Path
 from threading import Lock
 
-from hintings import FrameType, Point3DType, RotationType, Vertex3DType, Triangle3DType
+from decoder import PNG
+from hintings import (
+    RowType,
+    FrameType,
+    ImageType,
+    Point3DType,
+    RotationType,
+    Vertex3DType,
+    TriangleVerticesType,
+    Texture2DType,
+    TriangleTexturesType,
+    Normal3DType,
+    TriangleNormalsType,
+    Vertex3DTexture2DNormal3DType,
+    PixelCoordinateType,
+    PixelDataType,
+)
 
 
 def sort_counterclockwisely(
-    vertex_a: tuple[float, float],
-    vertex_b: tuple[float, float],
-    vertex_c: tuple[float, float],
+    vertex_textuure_a: Vertex3DTexture2DNormal3DType,
+    vertex_texture_b: Vertex3DTexture2DNormal3DType,
+    vertex_texture_c: Vertex3DTexture2DNormal3DType,
 ) -> tuple[
-    tuple[float, float],
-    tuple[float, float],
-    tuple[float, float],
+    Vertex3DTexture2DNormal3DType,
+    Vertex3DTexture2DNormal3DType,
+    Vertex3DTexture2DNormal3DType,
 ]:
     # Sort the vertices counterclockwisely
-    vertex_a, vertex_b, vertex_c = sorted(
-        (vertex_a, vertex_b, vertex_c),
+    vertex_textuure_a, vertex_texture_b, vertex_texture_c = sorted(
+        (vertex_textuure_a, vertex_texture_b, vertex_texture_c),
         key=lambda tuple_xy: tuple_xy[1],
         reverse=True,
     )
-    if vertex_b[1] == vertex_a[1] and vertex_b[0] > vertex_a[0]:
-        vertex_a, vertex_b = vertex_b, vertex_a
+    if (
+        vertex_texture_b[1] == vertex_textuure_a[1]
+        and vertex_texture_b[0] > vertex_textuure_a[0]
+    ):
+        vertex_textuure_a, vertex_texture_b = vertex_texture_b, vertex_textuure_a
     else:
-        vertex_b, vertex_c = sorted(
-            (vertex_b, vertex_c),
+        vertex_texture_b, vertex_texture_c = sorted(
+            (vertex_texture_b, vertex_texture_c),
             key=lambda tuple_xy: tuple_xy[0],
         )
-    return vertex_a, vertex_b, vertex_c
+    return vertex_textuure_a, vertex_texture_b, vertex_texture_c
 
 
-def bresenham_line(
-    vertex1: tuple[float, float],
-    vertex2: tuple[float, float],
+def get_line_bresenham(
+    vertex_texture1: Vertex3DTexture2DNormal3DType,
+    vertex_texture2: Vertex3DTexture2DNormal3DType,
     border: tuple[int, int, int, int],
-) -> set[tuple[int, int]]:
+) -> dict[PixelCoordinateType, PixelDataType]:
     # Bresenham line algorithm
-    line: set[tuple[int, int]] = set()
+    line: dict[PixelCoordinateType, PixelDataType] = {}
     left, right, top, bottom = border
-    x1, y1, x2, y2 = map(int, (*vertex1, *vertex2))
+    x1, y1, _, _, _, _, _, _, x2, y2, _, _, _, _, _, _ = map(
+        int, (*vertex_texture1, *vertex_texture2)
+    )
     if (
         (x1 < left and x2 < left)
         or (x1 > right or x2 > right)
@@ -58,7 +79,7 @@ def bresenham_line(
     while True:
         middle_coordinate = (x1, y1)
         if left <= x1 <= right and bottom <= y1 <= top:
-            line.add(middle_coordinate)
+            line[middle_coordinate] = (255, 255, 255, 255, 9608)
         if middle_coordinate == end_coordinate:
             break
         double_error = 2 * error
@@ -72,54 +93,71 @@ def bresenham_line(
 
 
 def get_mesh_line(
-    vertices: tuple[
-        tuple[float, float],
-        tuple[float, float],
-        tuple[float, float],
-    ],
+    vertex_texture_a: Vertex3DTexture2DNormal3DType,
+    vertex_texture_b: Vertex3DTexture2DNormal3DType,
+    vertex_texture_c: Vertex3DTexture2DNormal3DType,
+    texture: ImageType,
     border: tuple[int, int, int, int],
-) -> set[tuple[int, int]]:
-    vertex_a, vertex_b, vertex_c = vertices
+) -> dict[PixelCoordinateType, PixelDataType]:
     # There is a risk that the k of the line goes infinite or 0,
     # leading to poor performance of bresenham line algorithm.
     # TODO: fixme.
     return (
-        bresenham_line(vertex_a, vertex_b, border)
-        | bresenham_line(vertex_b, vertex_c, border)
-        | bresenham_line(vertex_c, vertex_a, border)
+        get_line_bresenham(vertex_texture_a, vertex_texture_b, border)
+        | get_line_bresenham(vertex_texture_b, vertex_texture_c, border)
+        | get_line_bresenham(vertex_texture_c, vertex_texture_a, border)
     )
+
+
+def get_textured_triangles(
+    vertex_texture_a: Vertex3DTexture2DNormal3DType,
+    vertex_texture_b: Vertex3DTexture2DNormal3DType,
+    vertex_texture_c: Vertex3DTexture2DNormal3DType,
+    texture: ImageType,
+    border: tuple[int, int, int, int],
+) -> dict[PixelCoordinateType, PixelDataType]:
+    return {}
 
 
 class Object(object):
     def __init__(self, filepath: str) -> None:
-        self._filepath = Path(filepath)
+        self._filepath = filepath
         self._name = ""
-        self._triangle_vertices: set[Triangle3DType] = set()
+        self._triangles: set[
+            tuple[
+                TriangleVerticesType,
+                TriangleTexturesType,
+                TriangleNormalsType,
+            ]
+        ] = set()
+        self._texture: ImageType = []
         # Parse file data and retrieve triangles vertices
         vertices: list[Vertex3DType] = []
-        normals: list[tuple[float, float, float]] = []
-        textures: list[tuple[float, ...]] = []
-        faces: list[tuple[int, ...]] = []
-        for line in self._filepath.read_text().strip().splitlines():
+        textures: list[Texture2DType] = []
+        normals: list[Normal3DType] = []
+        faces: list[tuple[tuple[int, ...], ...]] = []
+        for line in Path(filepath).read_text().strip().splitlines():
             data_type, *data = line.strip().split()
             if data_type == "o":
                 self._name = " ".join(data)
             elif data_type == "v":
                 x, y, z, *_ = map(float, data)
                 vertices.append((x, y, z))
+            elif data_type == "vt":
+                u, v, *_ = map(float, data)
+                textures.append((u, v))
+                # u, *vw = map(float, data)
+                # if len(vw) == 2:
+                #     v, w = vw
+                #     textures.append((u, v, w))
+                # elif len(vw) == 1:
+                #     (v,) = vw
+                #     textures.append((u, v))
+                # elif len(vw) == 0:
+                #     textures.append((u,))
             elif data_type == "vn":
                 x, y, z, *_ = map(float, data)
                 normals.append((x, y, z))
-            elif data_type == "vt":
-                u, *vw = map(float, data)
-                if len(vw) == 2:
-                    v, w = vw
-                    textures.append((u, v, w))
-                elif len(vw) == 1:
-                    (v,) = vw
-                    textures.append((u, v))
-                elif len(vw) == 0:
-                    textures.append((u,))
             elif data_type == "s":
                 (data,) = data
                 if data == "off":
@@ -127,29 +165,81 @@ class Object(object):
                 else:
                     group_number = int(data)  # type: ignore
             elif data_type == "f":
-                face: list[int] | tuple[int, ...] = []
+                face_vertices_indices: list[int] | tuple[int, ...] = []
+                face_textures_indices: list[int] | tuple[int, ...] = []
+                face_normals_indices: list[int] | tuple[int, ...] = []
                 for part in data:
                     v_index, vt_index, vn_index = part.split("/")  # type: ignore
-                    face.append(int(v_index) - 1)
-                faces.append(tuple(face))
-        for face in faces:
-            index_a, index_b, index_c, *_ = face
-            self._triangle_vertices.add(
+                    face_vertices_indices.append(int(v_index) - 1)
+                    face_textures_indices.append(int(vt_index) - 1)
+                    face_normals_indices.append(int(vn_index) - 1)
+                faces.append(
+                    (
+                        tuple(face_vertices_indices),
+                        tuple(face_textures_indices),
+                        tuple(face_normals_indices),
+                    )
+                )
+            elif data_type == "usemtl":
+                model_filepath = Path(filepath)
+                material_filepath = (
+                    model_filepath.parent.parent
+                    / "materials"
+                    / ("%s.png" % model_filepath.stem)
+                )
+                self._texture = PNG(material_filepath.as_posix()).image_data
+        for face_vertices_indices, face_textures_indices, face_normals_indices in faces:
+            face_vertex_a_index, face_vertex_b_index, face_vertex_c_index, *_ = (
+                face_vertices_indices
+            )
+            face_texture_a_index, face_texture_b_index, face_texture_c_index, *_ = (
+                face_textures_indices
+            )
+            face_normal_a_index, face_normal_b_index, face_normal_c_index, *_ = (
+                face_normals_indices
+            )
+            self._triangles.add(
                 (
-                    vertices[index_a],
-                    vertices[index_b],
-                    vertices[index_c],
+                    (
+                        vertices[face_vertex_a_index],
+                        vertices[face_vertex_b_index],
+                        vertices[face_vertex_c_index],
+                    ),
+                    (
+                        textures[face_texture_a_index],
+                        textures[face_texture_b_index],
+                        textures[face_texture_c_index],
+                    ),
+                    (
+                        normals[face_normal_a_index],
+                        normals[face_normal_b_index],
+                        normals[face_normal_c_index],
+                    ),
                 )
             )
 
     # Properties
     @property
+    def filepath(self) -> str:
+        return self._filepath
+
+    @property
     def name(self) -> str:
         return self._name
 
     @property
-    def triangle_vertices(self) -> set[Triangle3DType]:
-        return self._triangle_vertices
+    def triangles(self) -> set[
+        tuple[
+            TriangleVerticesType,
+            TriangleTexturesType,
+            TriangleNormalsType,
+        ]
+    ]:
+        return self._triangles
+
+    @property
+    def texture(self) -> ImageType:
+        return self._texture
 
     # Update methods
     def update(self, delta_time: float = 0.0) -> None:
@@ -214,7 +304,7 @@ class Camera(object):
         self._dash_speed = abs(dash_speed)
         self._controllable = controllable
         self._objects: set[Object] = set()
-        self._lines: set[tuple[int, int]] = set()
+        self._pixels: dict[PixelCoordinateType, PixelDataType] = {}
         self._information: list[str] = []
         self._delta_time = 0.0
         # Register controller
@@ -248,8 +338,10 @@ class Camera(object):
         self._quit_state = False
         self._reset_state = False
 
-        # Miscellaneous state
+        # Miscellaneous
         self._display_information_state = False
+        render_mode = 0  # 0 -> mesh lines  1 -> textured triangles
+        self._selected_render_function = get_mesh_line
 
         # With third-party modules
         # Move state
@@ -265,7 +357,7 @@ class Camera(object):
             from keyboard import KeyboardEvent, KEY_DOWN, KEY_UP
 
             active_states = {KEY_DOWN: True, KEY_UP: False, None: False}
-            display_information_counter = time.perf_counter_ns()
+            time_counter = time.perf_counter_ns()
 
             def quit(event: KeyboardEvent) -> None:
                 self._quit_state = active_states.get(event.event_type, False)
@@ -274,13 +366,24 @@ class Camera(object):
                 self._reset_state = active_states.get(event.event_type, False)
 
             def switch_display_information(event: KeyboardEvent) -> None:
-                nonlocal display_information_counter
+                nonlocal time_counter
                 # Timeout using millisecond
-                if (time.perf_counter_ns() - display_information_counter) / 1e6 > 200:
-                    display_information_counter = time.perf_counter_ns()
+                if (time.perf_counter_ns() - time_counter) / 1e6 > 200:
+                    time_counter = time.perf_counter_ns()
                     self._display_information_state = (
                         not self._display_information_state
                     )
+
+            def change_render_mode(event: KeyboardEvent) -> None:
+                nonlocal time_counter, render_mode
+                # Timeout using millisecond
+                if (time.perf_counter_ns() - time_counter) / 1e6 > 200:
+                    time_counter = time.perf_counter_ns()
+                    render_mode = (render_mode + 1) % 2
+                    self._selected_render_function = (
+                        get_mesh_line,
+                        get_textured_triangles,
+                    )[render_mode]
 
             def dash(event: KeyboardEvent) -> None:
                 self._dash_state = active_states.get(event.event_type, False)
@@ -308,6 +411,7 @@ class Camera(object):
             keyboard.hook_key("r", reset)
             # Miscellaneous
             keyboard.hook_key("i", switch_display_information)
+            keyboard.hook_key("p", change_render_mode)
             # Position
             keyboard.hook_key("shift", dash)
             keyboard.hook_key("w", move_forward)
@@ -343,19 +447,28 @@ class Camera(object):
         if keyboard_listener is not None:
 
             # Quit and reset state
-            def stop_and_quit() -> None:
+            def stop_and_quit_legacy() -> None:
                 keyboard_listener.stop()
                 self._quit_state = True
 
             # Miscellaneous state
-            def switch_display_information_override() -> None:
+            def switch_display_information_legacy() -> None:
                 self._display_information_state = not self._display_information_state
 
+            def change_render_mode_legacy() -> None:
+                nonlocal render_mode
+                render_mode = (render_mode + 1) % 2
+                self._selected_render_function = (
+                    get_mesh_line,
+                    get_textured_triangles,
+                )[render_mode]
+
             # Quiting & resetting
-            keyboard_listener.register("\x1b", stop_and_quit)
+            keyboard_listener.register("\x1b", stop_and_quit_legacy)
             keyboard_listener.register("r", self._reset)
             # Miscellaneous
-            keyboard_listener.register("i", switch_display_information_override)
+            keyboard_listener.register("i", switch_display_information_legacy)
+            keyboard_listener.register("p", change_render_mode_legacy)
             # Position
             keyboard_listener.register("W", self._dash_forward)
             keyboard_listener.register("w", self._move_forward)
@@ -507,86 +620,121 @@ class Camera(object):
 
     def _update_objects(self, delta_time: float) -> None:
         # Iteration over all triangles. Assuming that every triangle is ▲abc
-        self._lines: set[tuple[int, int]] = set()
+        self._pixels: dict[PixelCoordinateType, PixelDataType] = {}
         for obj in self._objects:
-            for triangle_vertices in obj.triangle_vertices:
+            texture = obj.texture
+            for (
                 (
-                    (triangle_a_x, triangle_a_y, triangle_a_z),
-                    (triangle_b_x, triangle_b_y, triangle_b_z),
-                    (triangle_c_x, triangle_c_y, triangle_c_z),
-                ) = triangle_vertices
+                    (vertex_a_x, vertex_a_y, vertex_a_z),
+                    (vertex_b_x, vertex_b_y, vertex_b_z),
+                    (vertex_c_x, vertex_c_y, vertex_c_z),
+                ),
+                (
+                    (texture_a_u, texture_a_v),
+                    (texture_b_u, texture_b_v),
+                    (texture_c_u, texture_c_v),
+                ),
+                (
+                    (normal_a_x, normal_a_y, normal_a_z),
+                    (normal_b_x, normal_b_y, normal_b_z),
+                    (normal_c_x, normal_c_y, normal_c_z),
+                ),
+            ) in obj.triangles:
                 # Position
                 # Using vector for relative position
-                (triangle_a_x, triangle_a_y, triangle_a_z) = (
-                    triangle_a_x - self._x,
-                    triangle_a_y - self._y,
-                    triangle_a_z - self._z,
+                (vertex_a_x, vertex_a_y, vertex_a_z) = (
+                    vertex_a_x - self._x,
+                    vertex_a_y - self._y,
+                    vertex_a_z - self._z,
                 )
-                (triangle_b_x, triangle_b_y, triangle_b_z) = (
-                    triangle_b_x - self._x,
-                    triangle_b_y - self._y,
-                    triangle_b_z - self._z,
+                (vertex_b_x, vertex_b_y, vertex_b_z) = (
+                    vertex_b_x - self._x,
+                    vertex_b_y - self._y,
+                    vertex_b_z - self._z,
                 )
-                (triangle_c_x, triangle_c_y, triangle_c_z) = (
-                    triangle_c_x - self._x,
-                    triangle_c_y - self._y,
-                    triangle_c_z - self._z,
+                (vertex_c_x, vertex_c_y, vertex_c_z) = (
+                    vertex_c_x - self._x,
+                    vertex_c_y - self._y,
+                    vertex_c_z - self._z,
                 )
                 # Rotation
                 # Y-axis rotation that affects X/Z coordinates
-                triangle_a_x, triangle_a_z = (
-                    triangle_a_x * self._cos_pitch - triangle_a_z * self._sin_pitch,
-                    triangle_a_x * self._sin_pitch + triangle_a_z * self._cos_pitch,
+                vertex_a_x, vertex_a_z = (
+                    vertex_a_x * self._cos_pitch - vertex_a_z * self._sin_pitch,
+                    vertex_a_x * self._sin_pitch + vertex_a_z * self._cos_pitch,
                 )
-                triangle_b_x, triangle_b_z = (
-                    triangle_b_x * self._cos_pitch - triangle_b_z * self._sin_pitch,
-                    triangle_b_x * self._sin_pitch + triangle_b_z * self._cos_pitch,
+                vertex_b_x, vertex_b_z = (
+                    vertex_b_x * self._cos_pitch - vertex_b_z * self._sin_pitch,
+                    vertex_b_x * self._sin_pitch + vertex_b_z * self._cos_pitch,
                 )
-                triangle_c_x, triangle_c_z = (
-                    triangle_c_x * self._cos_pitch - triangle_c_z * self._sin_pitch,
-                    triangle_c_x * self._sin_pitch + triangle_c_z * self._cos_pitch,
+                vertex_c_x, vertex_c_z = (
+                    vertex_c_x * self._cos_pitch - vertex_c_z * self._sin_pitch,
+                    vertex_c_x * self._sin_pitch + vertex_c_z * self._cos_pitch,
                 )
                 # X-axis rotation that affects Y/Z coordinates
-                triangle_a_y, triangle_a_z = (
-                    triangle_a_y * self._cos_yaw + triangle_a_z * self._sin_yaw,
-                    -triangle_a_y * self._sin_yaw + triangle_a_z * self._cos_yaw,
+                vertex_a_y, vertex_a_z = (
+                    vertex_a_y * self._cos_yaw + vertex_a_z * self._sin_yaw,
+                    -vertex_a_y * self._sin_yaw + vertex_a_z * self._cos_yaw,
                 )
-                triangle_b_y, triangle_b_z = (
-                    triangle_b_y * self._cos_yaw + triangle_b_z * self._sin_yaw,
-                    -triangle_b_y * self._sin_yaw + triangle_b_z * self._cos_yaw,
+                vertex_b_y, vertex_b_z = (
+                    vertex_b_y * self._cos_yaw + vertex_b_z * self._sin_yaw,
+                    -vertex_b_y * self._sin_yaw + vertex_b_z * self._cos_yaw,
                 )
-                triangle_c_y, triangle_c_z = (
-                    triangle_c_y * self._cos_yaw + triangle_c_z * self._sin_yaw,
-                    -triangle_c_y * self._sin_yaw + triangle_c_z * self._cos_yaw,
+                vertex_c_y, vertex_c_z = (
+                    vertex_c_y * self._cos_yaw + vertex_c_z * self._sin_yaw,
+                    -vertex_c_y * self._sin_yaw + vertex_c_z * self._cos_yaw,
                 )
                 # Simple near/far plane culling
                 # TODO: implement advanced near/far plane culling
                 if not (
-                    self._near_plane < triangle_a_z < self._far_plane
-                    and self._near_plane < triangle_b_z < self._far_plane
-                    and self._near_plane < triangle_c_z < self._far_plane
+                    self._near_plane < vertex_a_z < self._far_plane
+                    and self._near_plane < vertex_b_z < self._far_plane
+                    and self._near_plane < vertex_c_z < self._far_plane
                 ):
                     continue
-                # Triangle vertices on camera screen
-                camera_triangle_vertex_a = (
-                    self._focal * triangle_a_x / triangle_a_z,
-                    self._focal * triangle_a_y / triangle_a_z,
+                # Triangle vertices projected on camera screen
+                vertex_texture_a = (
+                    self._focal * vertex_a_x / vertex_a_z,
+                    self._focal * vertex_a_y / vertex_a_z,
+                    vertex_a_z,
+                    texture_a_u,
+                    texture_a_v,
+                    normal_a_x,
+                    normal_a_y,
+                    normal_a_z,
                 )
-                camera_triangle_vertex_b = (
-                    self._focal * triangle_b_x / triangle_b_z,
-                    self._focal * triangle_b_y / triangle_b_z,
+                vertex_texture_b = (
+                    self._focal * vertex_b_x / vertex_b_z,
+                    self._focal * vertex_b_y / vertex_b_z,
+                    vertex_b_z,
+                    texture_b_u,
+                    texture_b_v,
+                    normal_b_x,
+                    normal_b_y,
+                    normal_b_z,
                 )
-                camera_triangle_vertex_c = (
-                    self._focal * triangle_c_x / triangle_c_z,
-                    self._focal * triangle_c_y / triangle_c_z,
+                vertex_texture_c = (
+                    self._focal * vertex_c_x / vertex_c_z,
+                    self._focal * vertex_c_y / vertex_c_z,
+                    vertex_c_z,
+                    texture_c_u,
+                    texture_c_v,
+                    normal_c_x,
+                    normal_c_y,
+                    normal_c_z,
                 )
-                # Triangle on camera screen
-                triangle_vertices = sort_counterclockwisely(
-                    vertex_a=camera_triangle_vertex_a,
-                    vertex_b=camera_triangle_vertex_b,
-                    vertex_c=camera_triangle_vertex_c,
+                vertex_texture_a, vertex_texture_b, vertex_texture_c = (
+                    sort_counterclockwisely(
+                        vertex_texture_a, vertex_texture_b, vertex_texture_c
+                    )
                 )
-                self._lines |= get_mesh_line(triangle_vertices, self._screen_border)
+                self._pixels |= self._selected_render_function(
+                    vertex_texture_a,
+                    vertex_texture_b,
+                    vertex_texture_c,
+                    texture,
+                    self._screen_border,
+                )
 
     def _update_infomation(self, delta_time: float) -> None:
         if self._display_information_state:
@@ -620,22 +768,20 @@ class Camera(object):
 
     # Draw methods
     def get_frame(self) -> FrameType:
-        frame: FrameType = [
-            [
-                (
-                    (255, 255, 255, 255, ord(self._information[y][x]))
-                    if self._information[y][x] != " "
-                    else (
-                        (255, 255, 255, 255, 9608)
-                        if ((x - self._half_width) // 2, y - self._half_height)
-                        in self._lines
-                        else (255, 255, 255, 255, 32)
+        frame: FrameType = []
+        for y in range(0, self._screen_height):
+            row: RowType = []
+            for x in range(0, self._screen_width):
+                character = self._information[y][x]
+                if character != " ":
+                    pixel = (255, 255, 255, 255, ord(character))
+                else:
+                    pixel = self._pixels.get(
+                        ((x - self._half_width) // 2, y - self._half_height),
+                        (255, 255, 255, 255, 32),
                     )
-                )
-                for x in range(0, self._screen_width)
-            ]
-            for y in range(0, self._screen_height)
-        ]
+                row.append(pixel)
+            frame.append(row)
         frame.reverse()
         return frame
 
