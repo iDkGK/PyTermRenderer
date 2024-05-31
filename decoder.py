@@ -7,7 +7,7 @@ import zlib
 from functools import cached_property
 from pathlib import Path
 
-from hintings import FrameType, FramesType, RowType
+from hintings import ImageType, ImagesType, RowType
 
 
 class FileCorruptionError(Exception):
@@ -106,7 +106,7 @@ class PNG(object):
             )
         filtered_bytes = zlib.decompress(b"".join(binary_data))
         defiltered_bytes: list[bytes] = []
-        self._image_data: FrameType = []
+        self._image_data: ImageType = []
         channels = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}.get(self._color_type, 0)
         if channels == 0:
             raise FileCorruptionError("unknown color type. The image may be corrupted.")
@@ -531,11 +531,11 @@ class PNG(object):
         return self._width, self._height
 
     @cached_property
-    def image_data(self) -> FrameType:
+    def image_data(self) -> ImageType:
         """Get PNG image data
 
         Returns:
-            FrameType: 2D list of RGBA values in tuple
+            ImageType: 2D list of RGBA values in tuple
         """
         return self.decode()._image_data
 
@@ -651,11 +651,11 @@ class PNGSequence(object):
         return self
 
     @cached_property
-    def image_data_sequence(self) -> FramesType:
+    def image_data_sequence(self) -> ImagesType:
         """Get the data of all PNG images in sequence
 
         Returns:
-            FramesType: list or Generator of 2D list of tuples of RGBA values
+            ImagesType: list or Generator of 2D list of tuples of RGBA values
         """
         return self.decode_all()._image_data_sequence
 
