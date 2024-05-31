@@ -1,5 +1,6 @@
 import math
 import sys
+import time
 import warnings
 from pathlib import Path
 from threading import Lock
@@ -219,6 +220,8 @@ class Camera(object):
         # Register controller
         if not self._controllable:
             return
+        from controller import KeyboardListener
+
         try:
             import keyboard
 
@@ -237,8 +240,6 @@ class Camera(object):
             )
         # keyboard = mouse = None
         if keyboard is None or mouse is None:
-            from controller import KeyboardListener
-
             keyboard_listener = KeyboardListener()
         else:
             keyboard_listener = None
@@ -246,6 +247,9 @@ class Camera(object):
         # Quit and reset state
         self._quit_state = False
         self._reset_state = False
+
+        # Miscellaneous state
+        self._display_information_state = False
 
         # With third-party modules
         # Move state
@@ -261,12 +265,22 @@ class Camera(object):
             from keyboard import KeyboardEvent, KEY_DOWN, KEY_UP
 
             active_states = {KEY_DOWN: True, KEY_UP: False, None: False}
+            display_information_counter = time.perf_counter_ns()
 
             def quit(event: KeyboardEvent) -> None:
                 self._quit_state = active_states.get(event.event_type, False)
 
             def reset(event: KeyboardEvent) -> None:
                 self._reset_state = active_states.get(event.event_type, False)
+
+            def switch_display_information(event: KeyboardEvent) -> None:
+                nonlocal display_information_counter
+                # Timeout using millisecond
+                if (time.perf_counter_ns() - display_information_counter) / 1e6 > 200:
+                    display_information_counter = time.perf_counter_ns()
+                    self._display_information_state = (
+                        not self._display_information_state
+                    )
 
             def dash(event: KeyboardEvent) -> None:
                 self._dash_state = active_states.get(event.event_type, False)
@@ -289,10 +303,12 @@ class Camera(object):
             def move_downward(event: KeyboardEvent) -> None:
                 self._move_downward_state = active_states.get(event.event_type, False)
 
-            # Quiting
+            # Quiting & resetting
             keyboard.hook_key("escape", quit)
-            # Position
             keyboard.hook_key("r", reset)
+            # Miscellaneous
+            keyboard.hook_key("i", switch_display_information)
+            # Position
             keyboard.hook_key("shift", dash)
             keyboard.hook_key("w", move_forward)
             keyboard.hook_key("s", move_backward)
@@ -326,14 +342,21 @@ class Camera(object):
         # With custom `KeyboardListener` as fallback
         if keyboard_listener is not None:
 
+            # Quit and reset state
             def stop_and_quit() -> None:
                 keyboard_listener.stop()
                 self._quit_state = True
 
-            # Quiting
+            # Miscellaneous state
+            def switch_display_information_override() -> None:
+                self._display_information_state = not self._display_information_state
+
+            # Quiting & resetting
             keyboard_listener.register("\x1b", stop_and_quit)
-            # Position
             keyboard_listener.register("r", self._reset)
+            # Miscellaneous
+            keyboard_listener.register("i", switch_display_information_override)
+            # Position
             keyboard_listener.register("W", self._dash_forward)
             keyboard_listener.register("w", self._move_forward)
             keyboard_listener.register("S", self._dash_backward)
@@ -566,22 +589,27 @@ class Camera(object):
                 self._lines |= get_mesh_line(triangle_vertices, self._screen_border)
 
     def _update_infomation(self, delta_time: float) -> None:
-        self._information = [
-            *(("".rjust(self._screen_width),) * (self._screen_height - 3)),
-            ("FOV: %f" % self._field_of_view).rjust(self._screen_width),
-            ("Rotation (Yaw, Pitch): (%f, %f)" % (self._yaw, self._pitch)).rjust(
-                self._screen_width
-            ),
-            # There's no need to display direction vector
-            # Display it only for debugging case.
-            # (
-            #     "Direction vector (X, Z): (%f, %f, %f)"
-            #     % (self._vector_x, self._vector_y, self._vector_z)
-            # ).rjust(self._screen_width),
-            ("Coordinate (X, Y, Z): (%f, %f, %f)" % (self._x, self._y, self._z)).rjust(
-                self._screen_width
-            ),
-        ]
+        if self._display_information_state:
+            self._information = [
+                *(("".rjust(self._screen_width),) * (self._screen_height - 3)),
+                ("FOV: %f" % self._field_of_view).rjust(self._screen_width),
+                ("Rotation (Yaw, Pitch): (%f, %f)" % (self._yaw, self._pitch)).rjust(
+                    self._screen_width
+                ),
+                # There's no need to display direction vector
+                # Display it only for debugging case.
+                # (
+                #     "Direction vector (X, Z): (%f, %f, %f)"
+                #     % (self._vector_x, self._vector_y, self._vector_z)
+                # ).rjust(self._screen_width),
+                (
+                    "Coordinate (X, Y, Z): (%f, %f, %f)" % (self._x, self._y, self._z)
+                ).rjust(self._screen_width),
+            ]
+        else:
+            self._information = [
+                *(("".rjust(self._screen_width),) * (self._screen_height)),
+            ]
 
     def update(self, delta_time: float = 0.0) -> None:
         self._update_position(delta_time)
