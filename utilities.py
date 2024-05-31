@@ -567,7 +567,7 @@ class Camera(object):
 
     def _update_infomation(self, delta_time: float) -> None:
         self._information = [
-            *(("".rjust(self._screen_width),) * (self._screen_height - 4)),
+            *(("".rjust(self._screen_width),) * (self._screen_height - 3)),
             ("FOV: %f" % self._field_of_view).rjust(self._screen_width),
             ("Rotation (Yaw, Pitch): (%f, %f)" % (self._yaw, self._pitch)).rjust(
                 self._screen_width
