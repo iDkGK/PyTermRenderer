@@ -37,11 +37,11 @@ from threading import Thread, Event
 from hintings import AnyType, CallableType
 
 
-class KeyboardListenerInstantiatedError(Exception):
+class AlreadyInstantiatedError(Exception):
     pass
 
 
-class KeyboardListenerExitedError(Exception):
+class AlreadyExitedError(Exception):
     pass
 
 
@@ -50,7 +50,7 @@ class SingletonMeta(type):
 
     def __call__(cls, *args: AnyType, **kwargs: AnyType) -> "SingletonMeta":
         if cls in cls.__instances__:
-            raise KeyboardListenerInstantiatedError(
+            raise AlreadyInstantiatedError(
                 "attempted to instantiate KeyboardListener more than once"
             )
         cls.__instances__[cls] = super(SingletonMeta, cls).__call__(*args, **kwargs)
@@ -88,7 +88,7 @@ class KeyboardListener(metaclass=SingletonMeta):
 
     def stop(self) -> None:
         if self._stopping_event.is_set():
-            raise KeyboardListenerExitedError(
+            raise AlreadyExitedError(
                 "attempted to stop an exited KeyboardListener object"
             )
         for _ in range(0, self._hit_key_counter):
@@ -112,7 +112,7 @@ class KeyboardListener(metaclass=SingletonMeta):
         update: bool = False,
     ) -> None:
         if self._stopping_event.is_set():
-            raise KeyboardListenerExitedError(
+            raise AlreadyExitedError(
                 "attempted to register callback with an exited KeyboardListener object"
             )
         if update:
@@ -123,7 +123,7 @@ class KeyboardListener(metaclass=SingletonMeta):
 
     def unregister(self, key: str, callback: CallableType[..., AnyType]) -> None:
         if self._stopping_event.is_set():
-            raise KeyboardListenerExitedError(
+            raise AlreadyExitedError(
                 "attempted to unregister callback with an exited KeyboardListener object"
             )
         if key in self._callback_registry and callback in self._callback_registry[key]:
@@ -131,7 +131,7 @@ class KeyboardListener(metaclass=SingletonMeta):
 
     def unregister_all(self, key: str) -> None:
         if self._stopping_event.is_set():
-            raise KeyboardListenerExitedError(
+            raise AlreadyExitedError(
                 "attempted to unregister all callbacks an with exited KeyboardListener object"
             )
         if key in self._callback_registry:

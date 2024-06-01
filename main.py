@@ -41,7 +41,7 @@ def play_fake_3d_scene_game(fps: int = 60) -> None:
 
 
 def display_static_png_image(fps: int = 0) -> None:
-    example_png = PNG("resource/example.png").decode()
+    example_png = PNG("resource/images/example.png").decode()
     render_ascii(example_png.image_data, fps)
     render_gray(example_png.image_data, fps)
     render_rgba(example_png.image_data, fps)
@@ -52,9 +52,15 @@ def play_dynamic_png_images_ascii(fps: int = 0) -> None:
     holder_lock = Lock()
     renderer_lock = Lock()
     keyboard_listener = KeyboardListener()
-    example_png_sequence_ascii = PNGSequence("resource/example").decode_all()
-    example_png_sequence_gray = PNGSequence("resource/example").decode_all()
-    example_png_sequence_rgba = PNGSequence("resource/example").decode_all()
+    example_png_sequence_ascii = PNGSequence(
+        "resource/images/sequence/tom&jerry"
+    ).decode_all()
+    example_png_sequence_gray = PNGSequence(
+        "resource/images/sequence/tom&jerry"
+    ).decode_all()
+    example_png_sequence_rgba = PNGSequence(
+        "resource/images/sequence/tom&jerry"
+    ).decode_all()
 
     def switch() -> None:
         if holder_lock.locked() and renderer_lock.locked():
@@ -115,8 +121,8 @@ def _decode_processor(
     )
 
 
-def play_dynamic_png_images_in_parallel() -> FramesType:
-    png_dirpath = Path("resource/example")
+def play_dynamic_png_images_in_parallel(fps: int = 0) -> None:
+    png_dirpath = Path("resource/images/sequence/tom&jerry")
     if not png_dirpath.exists():
         raise FileNotFoundError(
             "directory %s does not exists." % png_dirpath.as_posix()
@@ -166,25 +172,57 @@ def play_dynamic_png_images_in_parallel() -> FramesType:
     indexed_frames_lists: list[tuple[int, FramesType]] = []
     while len(indexed_frames_lists) < generator_count:
         indexed_frames_lists.append(generator_queue.get())
-    return chain(
+    holder_lock = Lock()
+    renderer_lock = Lock()
+    keyboard_listener = KeyboardListener()
+
+    def switch() -> None:
+        if holder_lock.locked() and renderer_lock.locked():
+            holder_lock.release()
+            renderer_lock.release()
+        elif holder_lock.locked() and not renderer_lock.locked():
+            raise InvalidLockStatusError(
+                "holder lock is locked while renderer lock is released."
+            )
+        else:
+            while not holder_lock.locked():
+                if renderer_lock.acquire():
+                    holder_lock.acquire()
+
+    keyboard_listener.register(" ", switch)
+
+    for frame in chain(
         *map(
             lambda indexed_frames_list: indexed_frames_list[1],
             sorted(indexed_frames_lists, key=lambda indexed_frame: indexed_frame[0]),
         )
-    )
+    ):
+        hit_key = keyboard_listener.get()
+        hit_key_hex = hit_key.encode().hex()
+        if hit_key_hex in ("03", "1a", "1b", "1c"):
+            break
+        renderer_lock.acquire()
+        render_ascii(frame, fps)
+        renderer_lock.release()
+
+    keyboard_listener.stop()
+    if holder_lock.locked():
+        holder_lock.release()
+    if renderer_lock.locked():
+        renderer_lock.release()
 
 
 if __name__ == "__main__":
     clear_screen()
+    if False:
+        display_static_png_image(fps=1)
+    if False:
+        play_dynamic_png_images_ascii(fps=15)
+    if False:
+        play_dynamic_png_images_in_parallel(fps=15)
     if False:
         play_code_rain_animation(fps=15)
     if False:
         play_digital_clock_animation(fps=10)
     if True:
         play_fake_3d_scene_game(fps=30)
-    if False:
-        display_static_png_image(fps=1)
-    if False:
-        play_dynamic_png_images_ascii(fps=15)
-    if False:
-        decode_png_images_in_parallel()

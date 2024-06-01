@@ -1,4 +1,5 @@
 # PyTermRenderer
+
 ## _Terminal Renderer Written in Python3_
 
 PyTermRenderer, written in Python3, is a tool to render images, or to create and render some awesome effects in 256-color terminals.
@@ -6,7 +7,7 @@ PyTermRenderer, written in Python3, is a tool to render images, or to create and
 ## Modules & APIs
 
 - backend.py - providing some implemented ascii effects APIs
-  - `TheMatrixCodeRain` - a class providing ascii letters rain effect like the one in *The Matrix*
+  - `TheMatrixCodeRain` - a class providing ascii letters rain effect like the one in _The Matrix_
   - `DigitalTimeUnit` - a class providing digital clock effect
 - controller.py - providing APIs to capture or to handle key input events
   - `KeyboardListener` - a class providing methods to capture key input events, or to bind callbacks to key input events

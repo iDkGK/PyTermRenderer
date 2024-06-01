@@ -81,6 +81,26 @@ def get_mesh_line(
     )
 
 
+def get_culled_mesh_line(
+    vertex_texture_a: Vertex3DTexture2DNormal3DType,
+    vertex_texture_b: Vertex3DTexture2DNormal3DType,
+    vertex_texture_c: Vertex3DTexture2DNormal3DType,
+    texture: ImageType,
+    border: tuple[int, int, int, int],
+) -> dict[PixelCoordinateType, PixelDataType]:
+    return {}
+
+
+def get_untextured_triangles(
+    vertex_texture_a: Vertex3DTexture2DNormal3DType,
+    vertex_texture_b: Vertex3DTexture2DNormal3DType,
+    vertex_texture_c: Vertex3DTexture2DNormal3DType,
+    texture: ImageType,
+    border: tuple[int, int, int, int],
+) -> dict[PixelCoordinateType, PixelDataType]:
+    return {}
+
+
 def get_textured_triangles(
     vertex_texture_a: Vertex3DTexture2DNormal3DType,
     vertex_texture_b: Vertex3DTexture2DNormal3DType,
@@ -88,7 +108,6 @@ def get_textured_triangles(
     texture: ImageType,
     border: tuple[int, int, int, int],
 ) -> dict[PixelCoordinateType, PixelDataType]:
-
     return {}
 
 
@@ -155,10 +174,8 @@ class Object(object):
                 )
             elif data_type == "usemtl":
                 model_filepath = Path(filepath)
-                material_filepath = (
-                    model_filepath.parent.parent
-                    / "materials"
-                    / ("%s.png" % model_filepath.stem)
+                material_filepath = model_filepath.parent / (
+                    "materials/%s.png" % model_filepath.stem
                 )
                 self._texture = PNG(material_filepath.as_posix()).image_data
         for face_vertices_indices, face_textures_indices, face_normals_indices in faces:
@@ -313,8 +330,21 @@ class Camera(object):
 
         # Miscellaneous
         self._display_information_state = False
-        render_mode = 0  # 0 -> mesh lines  1 -> textured triangles
-        self._selected_render_function = get_mesh_line
+        render_modes = (
+            "Mesh Line",
+            "Mesh Line with Culling",
+            "Model without Texture",
+            "Model with Texture",
+        )
+        render_functions = (
+            get_mesh_line,
+            get_culled_mesh_line,
+            get_untextured_triangles,
+            get_textured_triangles,
+        )
+        render_mode_index = 0
+        self._selected_render_mode = render_modes[render_mode_index]
+        self._selected_render_function = render_functions[render_mode_index]
 
         # With third-party modules
         # Move state
@@ -348,15 +378,13 @@ class Camera(object):
                     )
 
             def change_render_mode(event: KeyboardEvent) -> None:
-                nonlocal time_counter, render_mode
+                nonlocal time_counter, render_mode_index
                 # Timeout using millisecond
                 if (time.perf_counter_ns() - time_counter) / 1e6 > 200:
                     time_counter = time.perf_counter_ns()
-                    render_mode = (render_mode + 1) % 2
-                    self._selected_render_function = (
-                        get_mesh_line,
-                        get_textured_triangles,
-                    )[render_mode]
+                    render_mode_index = (render_mode_index + 1) % len(render_functions)
+                    self._selected_render_mode = render_modes[render_mode_index]
+                    self._selected_render_function = render_functions[render_mode_index]
 
             def dash(event: KeyboardEvent) -> None:
                 self._dash_state = active_states.get(event.event_type, False)
@@ -429,12 +457,10 @@ class Camera(object):
                 self._display_information_state = not self._display_information_state
 
             def change_render_mode_legacy() -> None:
-                nonlocal render_mode
-                render_mode = (render_mode + 1) % 2
-                self._selected_render_function = (
-                    get_mesh_line,
-                    get_textured_triangles,
-                )[render_mode]
+                nonlocal render_mode_index
+                render_mode_index = (render_mode_index + 1) % len(render_functions)
+                self._selected_render_mode = render_modes[render_mode_index]
+                self._selected_render_function = render_functions[render_mode_index]
 
             # Quiting & resetting
             keyboard_listener.register("\x1b", stop_and_quit_legacy)
@@ -707,17 +733,14 @@ class Camera(object):
     def _update_infomation(self, delta_time: float) -> None:
         if self._display_information_state:
             self._information = [
-                *(("".rjust(self._screen_width),) * (self._screen_height - 3)),
+                *(("".rjust(self._screen_width),) * (self._screen_height - 4)),
                 ("FOV: %f" % self._field_of_view).rjust(self._screen_width),
+                ("Rendering Mode: %s" % self._selected_render_mode).rjust(
+                    self._screen_width
+                ),
                 ("Rotation (Yaw, Pitch): (%f, %f)" % (self._yaw, self._pitch)).rjust(
                     self._screen_width
                 ),
-                # There's no need to display direction vector
-                # Display it only for debugging case.
-                # (
-                #     "Direction vector (X, Z): (%f, %f, %f)"
-                #     % (self._vector_x, self._vector_y, self._vector_z)
-                # ).rjust(self._screen_width),
                 (
                     "Coordinate (X, Y, Z): (%f, %f, %f)" % (self._x, self._y, self._z)
                 ).rjust(self._screen_width),

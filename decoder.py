@@ -661,8 +661,8 @@ class PNGSequence(object):
 
 
 if __name__ == "__main__":
-    png_filepath = "resource/example.png"
-    png_dirpath = "resource/example"
+    png_filepath = "resource/images/example.png"
+    png_dirpath = "resource/images/sequence/tom&jerry"
     example_png = PNG(png_filepath, debug=True)
     print("size of %s: %dx%d" % (example_png.image_path, *example_png.image_size))
     example_png_sequence = PNGSequence(png_dirpath, debug=True)

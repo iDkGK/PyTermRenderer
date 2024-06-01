@@ -138,7 +138,7 @@ class DigitalTimeUnit(Backend):
         self._images_size, self._images_data = zip(
             *(
                 (image.image_size, image.image_data)
-                for image in PNGSequence("resource/digits")
+                for image in PNGSequence("resource/images/sequence/digits")
             )
         )
 
