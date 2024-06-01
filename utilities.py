@@ -426,6 +426,7 @@ class Camera(object):
             from mouse import ButtonEvent, WheelEvent, MoveEvent  # type: ignore
 
             rotate_lock = Lock()
+            mouse.move(self._screen_width, self._screen_height)  # type: ignore
 
             def rotate(event: ButtonEvent | WheelEvent | MoveEvent) -> None:
                 if not rotate_lock.acquire(blocking=False):
