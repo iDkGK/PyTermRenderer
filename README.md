@@ -6,9 +6,12 @@ PyTermRenderer, written in Python3, is a tool to render images, or to create and
 
 ## Modules & APIs
 
+- audio.py - providing APIs to play wav audio files
+  - `play_sound_async` - a function to play wav audio files
 - backend.py - providing some implemented ascii effects APIs
   - `TheMatrixCodeRain` - a class providing ascii letters rain effect like the one in _The Matrix_
   - `DigitalTimeUnit` - a class providing digital clock effect
+  - `Fake3DSceneGame` - a class providing basic features of 3D engine
 - controller.py - providing APIs to capture or to handle key input events
   - `KeyboardListener` - a class providing methods to capture key input events, or to bind callbacks to key input events
 - decoder.py - providing APIs to decode PNG images
@@ -22,6 +25,8 @@ PyTermRenderer, written in Python3, is a tool to render images, or to create and
   - `render_gray` - a function to render a frame of RGBA colors in grayscale mode
   - `render_rgba` - a function to render a frame with RGBA colored background
   - `clear_screen` - a function to clear terminal screen
+- utilities.py - providing some handy functions or classes
+  - ...
 
 ## Features
 
