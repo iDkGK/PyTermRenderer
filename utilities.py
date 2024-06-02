@@ -88,9 +88,18 @@ def get_culled_mesh_line(
     texture_image: ImageType | None,
     texture_size: tuple[int, int] | None,
 ) -> dict[PixelCoordinateType, PixelDataType]:
-    if texture_image is None or texture_size is None:
+    x_a, y_a, _, _, _, _, _, _, _ = vertex_texture_a
+    x_b, y_b, _, _, _, _, _, _, _ = vertex_texture_b
+    x_c, y_c, _, _, _, _, _, _, _ = vertex_texture_c
+    v_ab_x, v_ab_y = x_b - x_a, y_b - y_a
+    v_bc_x, v_bc_y = x_c - x_b, y_c - y_b
+    if v_ab_y * v_bc_x - v_ab_x * v_bc_y < 0:
         return {}
-    return {}
+    return (
+        get_line_bresenham(vertex_texture_a, vertex_texture_b, frustum_border)
+        | get_line_bresenham(vertex_texture_b, vertex_texture_c, frustum_border)
+        | get_line_bresenham(vertex_texture_c, vertex_texture_a, frustum_border)
+    )
 
 
 def get_untextured_triangles(
@@ -101,7 +110,12 @@ def get_untextured_triangles(
     texture_image: ImageType | None,
     texture_size: tuple[int, int] | None,
 ) -> dict[PixelCoordinateType, PixelDataType]:
-    if texture_image is None or texture_size is None:
+    x_a, y_a, _, _, _, _, _, _, _ = vertex_texture_a
+    x_b, y_b, _, _, _, _, _, _, _ = vertex_texture_b
+    x_c, y_c, _, _, _, _, _, _, _ = vertex_texture_c
+    v_ab_x, v_ab_y = x_b - x_a, y_b - y_a
+    v_bc_x, v_bc_y = x_c - x_b, y_c - y_b
+    if v_ab_y * v_bc_x - v_ab_x * v_bc_y < 0:
         return {}
     return {}
 
@@ -115,6 +129,13 @@ def get_textured_triangles(
     texture_size: tuple[int, int] | None,
 ) -> dict[PixelCoordinateType, PixelDataType]:
     if texture_image is None or texture_size is None:
+        return {}
+    x_a, y_a, _, _, _, _, _, _, _ = vertex_texture_a
+    x_b, y_b, _, _, _, _, _, _, _ = vertex_texture_b
+    x_c, y_c, _, _, _, _, _, _, _ = vertex_texture_c
+    v_ab_x, v_ab_y = x_b - x_a, y_b - y_a
+    v_bc_x, v_bc_y = x_c - x_b, y_c - y_b
+    if v_ab_y * v_bc_x - v_ab_x * v_bc_y < 0:
         return {}
     return {}
 
