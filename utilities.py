@@ -7,31 +7,32 @@ from threading import Lock
 
 from decoder import PNG
 from hintings import (
-    RowType,
     FrameType,
+    FrustumBorderType,
     ImageType,
-    Point3DType,
-    RotationType,
-    Vertex3DType,
-    TriangleVerticesType,
-    Texture2DType,
-    TriangleTexturesType,
     Normal3DType,
-    TriangleNormalsType,
-    Vertex3DTexture2DNormal3DType,
     PixelCoordinateType,
     PixelDataType,
+    Point3DType,
+    RotationType,
+    RowType,
+    Texture2DType,
+    TriangleNormalsType,
+    TriangleTexturesType,
+    TriangleVerticesType,
+    Vertex3DTexture2DNormal3DType,
+    Vertex3DType,
 )
 
 
 def get_line_bresenham(
     vertex_texture1: Vertex3DTexture2DNormal3DType,
     vertex_texture2: Vertex3DTexture2DNormal3DType,
-    border: tuple[int, int, int, int],
+    frustum_border: FrustumBorderType,
 ) -> dict[PixelCoordinateType, PixelDataType]:
     # Bresenham line algorithm
     line: dict[PixelCoordinateType, PixelDataType] = {}
-    left, right, top, bottom = border
+    left, right, top, bottom, _, _ = frustum_border
     x1, y1, _, _, _, _, _, _, x2, y2, _, _, _, _, _, _ = map(
         int, (*vertex_texture1, *vertex_texture2)
     )
@@ -68,16 +69,17 @@ def get_mesh_line(
     vertex_texture_a: Vertex3DTexture2DNormal3DType,
     vertex_texture_b: Vertex3DTexture2DNormal3DType,
     vertex_texture_c: Vertex3DTexture2DNormal3DType,
-    texture: ImageType,
-    border: tuple[int, int, int, int],
+    frustum_border: FrustumBorderType,
+    texture_image: ImageType | None,
+    texture_size: tuple[int, int] | None,
 ) -> dict[PixelCoordinateType, PixelDataType]:
     # There is a risk that the k of the line goes infinite or 0,
     # leading to poor performance of bresenham line algorithm.
     # TODO: fixme.
     return (
-        get_line_bresenham(vertex_texture_a, vertex_texture_b, border)
-        | get_line_bresenham(vertex_texture_b, vertex_texture_c, border)
-        | get_line_bresenham(vertex_texture_c, vertex_texture_a, border)
+        get_line_bresenham(vertex_texture_a, vertex_texture_b, frustum_border)
+        | get_line_bresenham(vertex_texture_b, vertex_texture_c, frustum_border)
+        | get_line_bresenham(vertex_texture_c, vertex_texture_a, frustum_border)
     )
 
 
@@ -85,9 +87,12 @@ def get_culled_mesh_line(
     vertex_texture_a: Vertex3DTexture2DNormal3DType,
     vertex_texture_b: Vertex3DTexture2DNormal3DType,
     vertex_texture_c: Vertex3DTexture2DNormal3DType,
-    texture: ImageType,
-    border: tuple[int, int, int, int],
+    frustum_border: FrustumBorderType,
+    texture_image: ImageType | None,
+    texture_size: tuple[int, int] | None,
 ) -> dict[PixelCoordinateType, PixelDataType]:
+    if texture_image is None or texture_size is None:
+        return {}
     return {}
 
 
@@ -95,9 +100,12 @@ def get_untextured_triangles(
     vertex_texture_a: Vertex3DTexture2DNormal3DType,
     vertex_texture_b: Vertex3DTexture2DNormal3DType,
     vertex_texture_c: Vertex3DTexture2DNormal3DType,
-    texture: ImageType,
-    border: tuple[int, int, int, int],
+    frustum_border: FrustumBorderType,
+    texture_image: ImageType | None,
+    texture_size: tuple[int, int] | None,
 ) -> dict[PixelCoordinateType, PixelDataType]:
+    if texture_image is None or texture_size is None:
+        return {}
     return {}
 
 
@@ -105,9 +113,12 @@ def get_textured_triangles(
     vertex_texture_a: Vertex3DTexture2DNormal3DType,
     vertex_texture_b: Vertex3DTexture2DNormal3DType,
     vertex_texture_c: Vertex3DTexture2DNormal3DType,
-    texture: ImageType,
-    border: tuple[int, int, int, int],
+    frustum_border: FrustumBorderType,
+    texture_image: ImageType | None,
+    texture_size: tuple[int, int] | None,
 ) -> dict[PixelCoordinateType, PixelDataType]:
+    if texture_image is None or texture_size is None:
+        return {}
     return {}
 
 
@@ -122,7 +133,7 @@ class Object(object):
                 TriangleNormalsType,
             ]
         ] = set()
-        self._texture: ImageType = []
+        self._texture: PNG | None = None
         # Parse file data and retrieve triangles vertices
         vertices: list[Vertex3DType] = []
         textures: list[Texture2DType] = []
@@ -177,7 +188,7 @@ class Object(object):
                 material_filepath = model_filepath.parent / (
                     "materials/%s.png" % model_filepath.stem
                 )
-                self._texture = PNG(material_filepath.as_posix()).image_data
+                self._texture = PNG(material_filepath.as_posix()).decode()
         for face_vertices_indices, face_textures_indices, face_normals_indices in faces:
             face_vertex_a_index, face_vertex_b_index, face_vertex_c_index, *_ = (
                 face_vertices_indices
@@ -228,7 +239,7 @@ class Object(object):
         return self._triangles
 
     @property
-    def texture(self) -> ImageType:
+    def texture(self) -> PNG | None:
         return self._texture
 
     # Update methods
@@ -267,11 +278,13 @@ class Camera(object):
             self._screen_width // 2,
             self._screen_height // 2,
         )
-        self._screen_border = (
+        self._frustum_border = (
             -self._half_width,
             self._screen_width - self._half_width,
             self._screen_height - self._half_height,
             -self._half_height,
+            near_plane,
+            far_plane,
         )
         if self._screen_height < 0:
             raise CameraScreenTooSmallError(
@@ -357,7 +370,7 @@ class Camera(object):
         self._move_downward_state = False
         # Keyboard
         if keyboard is not None:
-            from keyboard import KeyboardEvent, KEY_DOWN, KEY_UP
+            from keyboard import KEY_DOWN, KEY_UP, KeyboardEvent
 
             active_states = {KEY_DOWN: True, KEY_UP: False, None: False}
             time_counter = time.perf_counter_ns()
@@ -423,7 +436,7 @@ class Camera(object):
             keyboard.hook_key("ctrl", move_downward)
         # Mouse
         if mouse is not None:
-            from mouse import ButtonEvent, WheelEvent, MoveEvent  # type: ignore
+            from mouse import ButtonEvent, MoveEvent, WheelEvent  # type: ignore
 
             rotate_lock = Lock()
             mouse.move(self._screen_width, self._screen_height)  # type: ignore
@@ -623,6 +636,12 @@ class Camera(object):
         self._pixels: dict[PixelCoordinateType, PixelDataType] = {}
         for obj in self._objects:
             texture = obj.texture
+            if texture is None:
+                texture_image = None
+                texture_size = None
+            else:
+                texture_image = texture.image_data
+                texture_size = texture.image_size
             for (
                 (
                     (vertex_a_x, vertex_a_y, vertex_a_z),
@@ -727,8 +746,9 @@ class Camera(object):
                     vertex_texture_a,
                     vertex_texture_b,
                     vertex_texture_c,
-                    texture,
-                    self._screen_border,
+                    self._frustum_border,
+                    texture_image,
+                    texture_size,
                 )
 
     def _update_infomation(self, delta_time: float) -> None:

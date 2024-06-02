@@ -7,7 +7,7 @@ import zlib
 from functools import cached_property
 from pathlib import Path
 
-from hintings import ImageType, ImagesType, RowType
+from hintings import ImagesType, ImageType, RowType
 
 
 class FileCorruptionError(Exception):

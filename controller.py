@@ -32,7 +32,7 @@ except ImportError:
 
 
 from queue import LifoQueue
-from threading import Thread, Event
+from threading import Event, Thread
 
 from hintings import AnyType, CallableType
 

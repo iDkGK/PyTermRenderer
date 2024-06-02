@@ -19,11 +19,14 @@ Texture2DType = tuple[float, float]
 TriangleTexturesType = tuple[Texture2DType, Texture2DType, Texture2DType]
 Normal3DType = tuple[float, float, float]
 TriangleNormalsType = tuple[Normal3DType, Normal3DType, Normal3DType]
-Vertex3DTexture2DNormal3DType = tuple[
+FrustumBorderType = tuple[  # left right top bottom near far
+    float, float, float, float, float, float
+]
+Vertex3DTexture2DNormal3DType = tuple[  # X Y Z U V X Y Z
     float, float, float, float, float, float, float, float
 ]
-PixelCoordinateType = tuple[int, int]
-PixelDataType = tuple[int, int, int, int, int]
+PixelCoordinateType = tuple[int, int]  # X Y on camera screen
+PixelDataType = tuple[int, int, int, int, int]  # X Y R G B
 
 # Others
 EffectModeType = Literal["ascii", "binary", "short", "standard", "long"]

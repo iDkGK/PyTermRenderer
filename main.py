@@ -5,17 +5,11 @@ from multiprocessing import Process, Queue
 from pathlib import Path
 from threading import Lock
 
-from backend import TheMatrixCodeRain, DigitalTimeUnit, Fake3DSceneGame
+from backend import DigitalTimeUnit, Fake3DSceneGame, TheMatrixCodeRain
 from controller import KeyboardListener
 from decoder import PNG, PNGSequence
 from hintings import FramesType
-from renderer import (
-    clear_screen,
-    render_frame,
-    render_ascii,
-    render_gray,
-    render_rgba,
-)
+from renderer import clear_screen, render_ascii, render_frame, render_gray, render_rgba
 
 
 class InvalidLockStatusError(Exception):

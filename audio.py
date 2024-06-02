@@ -3,7 +3,7 @@ import platform
 
 if platform.system() == "Windows":
     import winsound
-    from winsound import SND_FILENAME, SND_ASYNC  # type: ignore
+    from winsound import SND_ASYNC, SND_FILENAME  # type: ignore
 
     def play_sound_async(wav_filepath: str) -> None:
         winsound.PlaySound(wav_filepath, SND_FILENAME | SND_ASYNC)  # type: ignore

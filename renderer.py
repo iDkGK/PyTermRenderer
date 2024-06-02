@@ -7,7 +7,6 @@ from collections import deque
 
 from hintings import FrameType
 
-
 """
 "\x1b[39m\x1b[39m"                 - Reset color
 "\x1b[<L>;<C>H" OR "\x1b[<L>;<C>f" - Puts the cursor at y L and x C.
