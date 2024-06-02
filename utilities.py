@@ -7,12 +7,12 @@ from threading import Lock
 
 from decoder import PNG
 from hintings import (
+    Coordinate2DType,
     FrameType,
     FrustumBorderType,
     ImageType,
     Normal3DType,
-    PixelCoordinateType,
-    PixelDataType,
+    PixelRGBACType,
     Point3DType,
     RotationType,
     RowType,
@@ -20,21 +20,22 @@ from hintings import (
     TriangleNormalsType,
     TriangleTexturesType,
     TriangleVerticesType,
+    Vertex2DType,
     Vertex3DTexture3DNormal3DType,
     Vertex3DType,
 )
 
 
 def get_line_bresenham(
-    vertex_texture1: Vertex3DTexture3DNormal3DType,
-    vertex_texture2: Vertex3DTexture3DNormal3DType,
+    vertex_texture1: Vertex3DType,
+    vertex_texture2: Vertex3DType,
     frustum_border: FrustumBorderType,
-) -> dict[PixelCoordinateType, PixelDataType]:
+) -> dict[Coordinate2DType, PixelRGBACType]:
     # Bresenham line algorithm
-    line: dict[PixelCoordinateType, PixelDataType] = {}
+    line: dict[Coordinate2DType, PixelRGBACType] = {}
     left, right, top, bottom, near, far = frustum_border
-    x1, y1, z1, _, _, _, _, _, _ = vertex_texture1
-    x2, y2, z2, _, _, _, _, _, _ = vertex_texture2
+    x1, y1, z1 = vertex_texture1
+    x2, y2, z2 = vertex_texture2
     x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
     end_coordinate = (x2, y2)
     delta_x = abs(x2 - x1)
@@ -62,6 +63,39 @@ def get_line_bresenham(
     return line
 
 
+def get_line_bresenham_xy(
+    vertex_texture1: Vertex2DType,
+    vertex_texture2: Vertex2DType,
+    frustum_border: FrustumBorderType,
+) -> dict[Coordinate2DType, PixelRGBACType]:
+    # Bresenham line algorithm
+    line: dict[Coordinate2DType, PixelRGBACType] = {}
+    left, right, top, bottom, *_ = frustum_border
+    x1, y1 = vertex_texture1
+    x2, y2 = vertex_texture2
+    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+    end_coordinate = (x2, y2)
+    delta_x = abs(x2 - x1)
+    delta_y = abs(y2 - y1)
+    step_x = 1 if x1 < x2 else -1
+    step_y = 1 if y1 < y2 else -1
+    error = delta_x - delta_y
+    while True:
+        middle_coordinate = (x1, y1)
+        if left < x1 < right and bottom < y1 < top:
+            line[middle_coordinate] = (255, 255, 255, 255, 9608)
+        if middle_coordinate == end_coordinate:
+            break
+        double_error = 2 * error
+        if double_error > -delta_y:
+            error -= delta_y
+            x1 += step_x
+        if double_error < delta_x:
+            error += delta_x
+            y1 += step_y
+    return line
+
+
 def get_mesh_line(
     vertex_texture_a: Vertex3DTexture3DNormal3DType,
     vertex_texture_b: Vertex3DTexture3DNormal3DType,
@@ -69,14 +103,17 @@ def get_mesh_line(
     frustum_border: FrustumBorderType,
     texture_image: ImageType | None,
     texture_size: tuple[int, int] | None,
-) -> dict[PixelCoordinateType, PixelDataType]:
-    # There is a risk that the k of the line goes infinite or 0,
-    # leading to poor performance of bresenham line algorithm.
-    # TODO: fixme.
+) -> dict[Coordinate2DType, PixelRGBACType]:
+    x_a, y_a, z_a, *_ = vertex_texture_a
+    x_b, y_b, z_b, *_ = vertex_texture_b
+    x_c, y_c, z_c, *_ = vertex_texture_c
+    vertex_a = (x_a, y_a, z_a)
+    vertex_b = (x_b, y_b, z_b)
+    vertex_c = (x_c, y_c, z_c)
     return (
-        get_line_bresenham(vertex_texture_a, vertex_texture_b, frustum_border)
-        | get_line_bresenham(vertex_texture_b, vertex_texture_c, frustum_border)
-        | get_line_bresenham(vertex_texture_c, vertex_texture_a, frustum_border)
+        get_line_bresenham(vertex_a, vertex_b, frustum_border)
+        | get_line_bresenham(vertex_b, vertex_c, frustum_border)
+        | get_line_bresenham(vertex_c, vertex_a, frustum_border)
     )
 
 
@@ -87,18 +124,21 @@ def get_culled_mesh_line(
     frustum_border: FrustumBorderType,
     texture_image: ImageType | None,
     texture_size: tuple[int, int] | None,
-) -> dict[PixelCoordinateType, PixelDataType]:
-    x_a, y_a, _, _, _, _, _, _, _ = vertex_texture_a
-    x_b, y_b, _, _, _, _, _, _, _ = vertex_texture_b
-    x_c, y_c, _, _, _, _, _, _, _ = vertex_texture_c
+) -> dict[Coordinate2DType, PixelRGBACType]:
+    x_a, y_a, z_a, *_ = vertex_texture_a
+    x_b, y_b, z_b, *_ = vertex_texture_b
+    x_c, y_c, z_c, *_ = vertex_texture_c
     v_ab_x, v_ab_y = x_b - x_a, y_b - y_a
     v_bc_x, v_bc_y = x_c - x_b, y_c - y_b
+    vertex_a = (x_a, y_a, z_a)
+    vertex_b = (x_b, y_b, z_b)
+    vertex_c = (x_c, y_c, z_c)
     if v_ab_y * v_bc_x - v_ab_x * v_bc_y < 0:
         return {}
     return (
-        get_line_bresenham(vertex_texture_a, vertex_texture_b, frustum_border)
-        | get_line_bresenham(vertex_texture_b, vertex_texture_c, frustum_border)
-        | get_line_bresenham(vertex_texture_c, vertex_texture_a, frustum_border)
+        get_line_bresenham(vertex_a, vertex_b, frustum_border)
+        | get_line_bresenham(vertex_b, vertex_c, frustum_border)
+        | get_line_bresenham(vertex_c, vertex_a, frustum_border)
     )
 
 
@@ -109,15 +149,79 @@ def get_untextured_triangles(
     frustum_border: FrustumBorderType,
     texture_image: ImageType | None,
     texture_size: tuple[int, int] | None,
-) -> dict[PixelCoordinateType, PixelDataType]:
-    x_a, y_a, _, _, _, _, _, _, _ = vertex_texture_a
-    x_b, y_b, _, _, _, _, _, _, _ = vertex_texture_b
-    x_c, y_c, _, _, _, _, _, _, _ = vertex_texture_c
+) -> dict[Coordinate2DType, PixelRGBACType]:
+    x_a, y_a, z_a, *_ = vertex_texture_a
+    x_b, y_b, z_b, *_ = vertex_texture_b
+    x_c, y_c, z_c, *_ = vertex_texture_c
     v_ab_x, v_ab_y = x_b - x_a, y_b - y_a
     v_bc_x, v_bc_y = x_c - x_b, y_c - y_b
     if v_ab_y * v_bc_x - v_ab_x * v_bc_y < 0:
         return {}
-    return {}
+    vertex_texture_a, vertex_texture_b, vertex_texture_c = sorted(
+        (vertex_texture_a, vertex_texture_b, vertex_texture_c),
+        key=lambda _: _[1],
+        reverse=True,
+    )
+    x_a, y_a, z_a, *_ = vertex_texture_a
+    x_b, y_b, z_b, *_ = vertex_texture_b
+    x_c, y_c, z_c, *_ = vertex_texture_c
+    vertex_a = (x_a, y_a, z_a)
+    vertex_b = (x_b, y_b, z_b)
+    vertex_c = (x_c, y_c, z_c)
+    # Longest line
+    line_ac = get_line_bresenham(vertex_a, vertex_c, frustum_border)
+    # Other lines
+    line_ab = get_line_bresenham(vertex_a, vertex_b, frustum_border)
+    line_bc = get_line_bresenham(vertex_b, vertex_c, frustum_border)
+    # Longest line xs on y
+    xsony_ac: dict[int, list[int]] = {}
+    for x, y in line_ac:
+        xsony_ac.setdefault(y, [])
+        xsony_ac[y].append(x)
+    # Other lines xs on y
+    xsony_ab: dict[int, list[int]] = {}
+    for x, y in line_ab:
+        xsony_ab.setdefault(y, [])
+        xsony_ab[y].append(x)
+    xsony_bc: dict[int, list[int]] = {}
+    for x, y in line_bc:
+        xsony_bc.setdefault(y, [])
+        xsony_bc[y].append(x)
+    # Sweep line between ab & ac
+    sweep_line_ab: dict[Coordinate2DType, PixelRGBACType] = {}
+    for y_ab, xs_ab in xsony_ab.items():
+        if y_ab not in xsony_ac:
+            continue
+        xs_ac_sorted = sorted(xsony_ac[y_ab])
+        x_ac_min, x_ac_max = xs_ac_sorted[0], xs_ac_sorted[-1]
+        xs_ab_sorted = sorted(xs_ab)
+        x_ab_min, x_ab_max = xs_ab_sorted[0], xs_ab_sorted[-1]
+        if abs(x_ac_min - x_ab_max) < abs(x_ac_max - x_ab_min):
+            sweep_line_ab |= get_line_bresenham_xy(
+                (x_ac_min, y_ab), (x_ab_max, y_ab), frustum_border
+            )
+        else:
+            sweep_line_ab |= get_line_bresenham_xy(
+                (x_ac_max, y_ab), (x_ab_min, y_ab), frustum_border
+            )
+    # Sweep line between ab & bc
+    sweep_line_bc: dict[Coordinate2DType, PixelRGBACType] = {}
+    for y_bc, xs_bc in xsony_bc.items():
+        if y_bc not in xsony_ac:
+            continue
+        xs_ac_sorted = sorted(xsony_ac[y_bc])
+        x_ac_min, x_ac_max = xs_ac_sorted[0], xs_ac_sorted[-1]
+        xs_bc_sorted = sorted(xs_bc)
+        x_bc_min, x_bc_max = xs_bc_sorted[0], xs_bc_sorted[-1]
+        if abs(x_ac_min - x_bc_max) < abs(x_ac_max - x_bc_min):
+            sweep_line_bc |= get_line_bresenham_xy(
+                (x_ac_min, y_bc), (x_bc_max, y_bc), frustum_border
+            )
+        else:
+            sweep_line_bc |= get_line_bresenham_xy(
+                (x_ac_max, y_bc), (x_bc_min, y_bc), frustum_border
+            )
+    return line_ac | line_ab | line_bc | sweep_line_ab | sweep_line_bc
 
 
 def get_textured_triangles(
@@ -127,16 +231,27 @@ def get_textured_triangles(
     frustum_border: FrustumBorderType,
     texture_image: ImageType | None,
     texture_size: tuple[int, int] | None,
-) -> dict[PixelCoordinateType, PixelDataType]:
+) -> dict[Coordinate2DType, PixelRGBACType]:
     if texture_image is None or texture_size is None:
         return {}
-    x_a, y_a, _, _, _, _, _, _, _ = vertex_texture_a
-    x_b, y_b, _, _, _, _, _, _, _ = vertex_texture_b
-    x_c, y_c, _, _, _, _, _, _, _ = vertex_texture_c
+    x_a, y_a, z_a, *_ = vertex_texture_a
+    x_b, y_b, z_b, *_ = vertex_texture_b
+    x_c, y_c, z_c, *_ = vertex_texture_c
     v_ab_x, v_ab_y = x_b - x_a, y_b - y_a
     v_bc_x, v_bc_y = x_c - x_b, y_c - y_b
     if v_ab_y * v_bc_x - v_ab_x * v_bc_y < 0:
         return {}
+    vertex_texture_a, vertex_texture_b, vertex_texture_c = sorted(
+        (vertex_texture_a, vertex_texture_b, vertex_texture_c),
+        key=lambda _: _[1],
+        reverse=True,
+    )
+    x_a, y_a, z_a, *_ = vertex_texture_a
+    x_b, y_b, z_b, *_ = vertex_texture_b
+    x_c, y_c, z_c, *_ = vertex_texture_c
+    vertex_a = (x_a, y_a, z_a)
+    vertex_b = (x_b, y_b, z_b)
+    vertex_c = (x_c, y_c, z_c)
     return {}
 
 
@@ -321,7 +436,7 @@ class Camera(object):
         self._dash_speed = abs(dash_speed)
         self._controllable = controllable
         self._objects: set[Object] = set()
-        self._pixels: dict[PixelCoordinateType, PixelDataType] = {}
+        self._pixels: dict[Coordinate2DType, PixelRGBACType] = {}
         self._information: list[str] = []
         self._delta_time = 0.0
         # Register controller
@@ -647,7 +762,7 @@ class Camera(object):
 
     def _update_objects(self, delta_time: float) -> None:
         # Iteration over all triangles. Assuming that every triangle is ▲abc
-        self._pixels: dict[PixelCoordinateType, PixelDataType] = {}
+        self._pixels: dict[Coordinate2DType, PixelRGBACType] = {}
         for obj in self._objects:
             if obj.texture is None:
                 texture_image = None
@@ -723,6 +838,10 @@ class Camera(object):
                     vertex_a_z > self._near_plane
                     and vertex_b_z > self._near_plane
                     and vertex_c_z > self._near_plane
+                ) or (
+                    vertex_a_z > self._far_plane
+                    and vertex_b_z > self._far_plane
+                    and vertex_c_z > self._far_plane
                 ):
                     continue
                 # Triangle vertices projected on camera screen

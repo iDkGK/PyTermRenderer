@@ -13,6 +13,7 @@ ImageType = list[RowType]
 ImagesType = Iterable[ImageType]
 Point3DType = tuple[float, float, float]
 RotationType = tuple[float, float]
+Vertex2DType = tuple[float, float]
 Vertex3DType = tuple[float, float, float]
 TriangleVerticesType = tuple[Vertex3DType, Vertex3DType, Vertex3DType]
 Texture3DType = tuple[float, float, float]
@@ -25,8 +26,8 @@ FrustumBorderType = tuple[  # left right top bottom near far
 Vertex3DTexture3DNormal3DType = tuple[  # X Y Z U V W X Y Z
     float, float, float, float, float, float, float, float, float
 ]
-PixelCoordinateType = tuple[int, int]  # X Y on camera screen
-PixelDataType = tuple[int, int, int, int, int]  # X Y R G B
+Coordinate2DType = tuple[int, int]  # X Y on camera screen
+PixelRGBACType = tuple[int, int, int, int, int]  # R G B A C
 
 # Others
 EffectModeType = Literal["ascii", "binary", "short", "standard", "long"]
