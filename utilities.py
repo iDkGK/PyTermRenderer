@@ -16,42 +16,38 @@ from hintings import (
     Point3DType,
     RotationType,
     RowType,
-    Texture2DType,
+    Texture3DType,
     TriangleNormalsType,
     TriangleTexturesType,
     TriangleVerticesType,
-    Vertex3DTexture2DNormal3DType,
+    Vertex3DTexture3DNormal3DType,
     Vertex3DType,
 )
 
 
 def get_line_bresenham(
-    vertex_texture1: Vertex3DTexture2DNormal3DType,
-    vertex_texture2: Vertex3DTexture2DNormal3DType,
+    vertex_texture1: Vertex3DTexture3DNormal3DType,
+    vertex_texture2: Vertex3DTexture3DNormal3DType,
     frustum_border: FrustumBorderType,
 ) -> dict[PixelCoordinateType, PixelDataType]:
     # Bresenham line algorithm
     line: dict[PixelCoordinateType, PixelDataType] = {}
-    left, right, top, bottom, _, _ = frustum_border
-    x1, y1, _, _, _, _, _, _, x2, y2, _, _, _, _, _, _ = map(
-        int, (*vertex_texture1, *vertex_texture2)
-    )
-    if (
-        (x1 < left and x2 < left)
-        or (x1 > right or x2 > right)
-        or (y1 < bottom and y2 < bottom)
-        or (y1 > top and y2 > top)
-    ):
-        return line
+    left, right, top, bottom, near, far = frustum_border
+    x1, y1, z1, _, _, _, _, _, _ = vertex_texture1
+    x2, y2, z2, _, _, _, _, _, _ = vertex_texture2
+    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
     end_coordinate = (x2, y2)
     delta_x = abs(x2 - x1)
     delta_y = abs(y2 - y1)
+    delta_z = abs(z2 - z1)
+    steps = max(delta_x, delta_y)
     step_x = 1 if x1 < x2 else -1
     step_y = 1 if y1 < y2 else -1
+    step_z = 0.0 if steps == 0.0 else (delta_z / steps if z1 < z2 else -delta_z / steps)
     error = delta_x - delta_y
     while True:
         middle_coordinate = (x1, y1)
-        if left <= x1 <= right and bottom <= y1 <= top:
+        if left < x1 < right and bottom < y1 < top and near < z1 < far:
             line[middle_coordinate] = (255, 255, 255, 255, 9608)
         if middle_coordinate == end_coordinate:
             break
@@ -62,13 +58,14 @@ def get_line_bresenham(
         if double_error < delta_x:
             error += delta_x
             y1 += step_y
+        z1 += step_z
     return line
 
 
 def get_mesh_line(
-    vertex_texture_a: Vertex3DTexture2DNormal3DType,
-    vertex_texture_b: Vertex3DTexture2DNormal3DType,
-    vertex_texture_c: Vertex3DTexture2DNormal3DType,
+    vertex_texture_a: Vertex3DTexture3DNormal3DType,
+    vertex_texture_b: Vertex3DTexture3DNormal3DType,
+    vertex_texture_c: Vertex3DTexture3DNormal3DType,
     frustum_border: FrustumBorderType,
     texture_image: ImageType | None,
     texture_size: tuple[int, int] | None,
@@ -84,9 +81,9 @@ def get_mesh_line(
 
 
 def get_culled_mesh_line(
-    vertex_texture_a: Vertex3DTexture2DNormal3DType,
-    vertex_texture_b: Vertex3DTexture2DNormal3DType,
-    vertex_texture_c: Vertex3DTexture2DNormal3DType,
+    vertex_texture_a: Vertex3DTexture3DNormal3DType,
+    vertex_texture_b: Vertex3DTexture3DNormal3DType,
+    vertex_texture_c: Vertex3DTexture3DNormal3DType,
     frustum_border: FrustumBorderType,
     texture_image: ImageType | None,
     texture_size: tuple[int, int] | None,
@@ -97,9 +94,9 @@ def get_culled_mesh_line(
 
 
 def get_untextured_triangles(
-    vertex_texture_a: Vertex3DTexture2DNormal3DType,
-    vertex_texture_b: Vertex3DTexture2DNormal3DType,
-    vertex_texture_c: Vertex3DTexture2DNormal3DType,
+    vertex_texture_a: Vertex3DTexture3DNormal3DType,
+    vertex_texture_b: Vertex3DTexture3DNormal3DType,
+    vertex_texture_c: Vertex3DTexture3DNormal3DType,
     frustum_border: FrustumBorderType,
     texture_image: ImageType | None,
     texture_size: tuple[int, int] | None,
@@ -110,9 +107,9 @@ def get_untextured_triangles(
 
 
 def get_textured_triangles(
-    vertex_texture_a: Vertex3DTexture2DNormal3DType,
-    vertex_texture_b: Vertex3DTexture2DNormal3DType,
-    vertex_texture_c: Vertex3DTexture2DNormal3DType,
+    vertex_texture_a: Vertex3DTexture3DNormal3DType,
+    vertex_texture_b: Vertex3DTexture3DNormal3DType,
+    vertex_texture_c: Vertex3DTexture3DNormal3DType,
     frustum_border: FrustumBorderType,
     texture_image: ImageType | None,
     texture_size: tuple[int, int] | None,
@@ -136,7 +133,7 @@ class Object(object):
         self._texture: PNG | None = None
         # Parse file data and retrieve triangles vertices
         vertices: list[Vertex3DType] = []
-        textures: list[Texture2DType] = []
+        textures: list[Texture3DType] = []
         normals: list[Normal3DType] = []
         faces: list[tuple[tuple[int, ...], ...]] = []
         for line in Path(filepath).read_text().strip().splitlines():
@@ -147,17 +144,14 @@ class Object(object):
                 x, y, z, *_ = map(float, data)
                 vertices.append((x, y, z))
             elif data_type == "vt":
-                u, v, *_ = map(float, data)
-                textures.append((u, v))
-                # u, *vw = map(float, data)
-                # if len(vw) == 2:
-                #     v, w = vw
-                #     textures.append((u, v, w))
-                # elif len(vw) == 1:
-                #     (v,) = vw
-                #     textures.append((u, v))
-                # elif len(vw) == 0:
-                #     textures.append((u,))
+                u, *vw = map(float, data)
+                if len(vw) == 2:
+                    v, w = vw
+                elif len(vw) == 1:
+                    (v,), w = vw, 0.0
+                else:
+                    v = w = 0.0
+                textures.append((u, v, w))
             elif data_type == "vn":
                 x, y, z, *_ = map(float, data)
                 normals.append((x, y, z))
@@ -278,14 +272,6 @@ class Camera(object):
             self._screen_width // 2,
             self._screen_height // 2,
         )
-        self._frustum_border = (
-            -self._half_width,
-            self._screen_width - self._half_width,
-            self._screen_height - self._half_height,
-            -self._half_height,
-            near_plane,
-            far_plane,
-        )
         if self._screen_height < 0:
             raise CameraScreenTooSmallError(
                 "camera screen is too small to render objects."
@@ -296,9 +282,16 @@ class Camera(object):
             / math.tan(math.radians(field_of_view / 2.0))
             / 2
         )
-        self._near_plane = near_plane
-        self._far_plane = far_plane
-        self._screen_depth = far_plane - near_plane
+        self._near_plane = max(0, near_plane)
+        self._far_plane = max(near_plane, far_plane)
+        self._frustum_border = (
+            -self._half_width,
+            self._screen_width - self._half_width,
+            self._screen_height - self._half_height,
+            -self._half_height,
+            self._near_plane,
+            self._far_plane,
+        )
         self._x, self._y, self._z = coordinate
         self._original_coordinate = coordinate
         self._yaw, self._pitch = rotation
@@ -635,30 +628,30 @@ class Camera(object):
         # Iteration over all triangles. Assuming that every triangle is ▲abc
         self._pixels: dict[PixelCoordinateType, PixelDataType] = {}
         for obj in self._objects:
-            texture = obj.texture
-            if texture is None:
+            if obj.texture is None:
                 texture_image = None
                 texture_size = None
             else:
-                texture_image = texture.image_data
-                texture_size = texture.image_size
-            for (
+                texture_image = obj.texture.image_data
+                texture_size = obj.texture.image_size
+            for vertices_texture_normals in obj.triangles:
                 (
-                    (vertex_a_x, vertex_a_y, vertex_a_z),
-                    (vertex_b_x, vertex_b_y, vertex_b_z),
-                    (vertex_c_x, vertex_c_y, vertex_c_z),
-                ),
-                (
-                    (texture_a_u, texture_a_v),
-                    (texture_b_u, texture_b_v),
-                    (texture_c_u, texture_c_v),
-                ),
-                (
-                    (normal_a_x, normal_a_y, normal_a_z),
-                    (normal_b_x, normal_b_y, normal_b_z),
-                    (normal_c_x, normal_c_y, normal_c_z),
-                ),
-            ) in obj.triangles:
+                    (
+                        (vertex_a_x, vertex_a_y, vertex_a_z),
+                        (vertex_b_x, vertex_b_y, vertex_b_z),
+                        (vertex_c_x, vertex_c_y, vertex_c_z),
+                    ),
+                    (
+                        (texture_a_u, texture_a_v, texture_a_w),
+                        (texture_b_u, texture_b_v, texture_b_w),
+                        (texture_c_u, texture_c_v, texture_c_w),
+                    ),
+                    (
+                        (normal_a_x, normal_a_y, normal_a_z),
+                        (normal_b_x, normal_b_y, normal_b_z),
+                        (normal_c_x, normal_c_y, normal_c_z),
+                    ),
+                ) = vertices_texture_normals
                 # Position
                 # Using vector for relative position
                 (vertex_a_x, vertex_a_y, vertex_a_z) = (
@@ -706,9 +699,9 @@ class Camera(object):
                 # Simple near/far plane culling
                 # TODO: implement advanced near/far plane culling
                 if not (
-                    self._near_plane < vertex_a_z < self._far_plane
-                    and self._near_plane < vertex_b_z < self._far_plane
-                    and self._near_plane < vertex_c_z < self._far_plane
+                    vertex_a_z > self._near_plane
+                    and vertex_b_z > self._near_plane
+                    and vertex_c_z > self._near_plane
                 ):
                     continue
                 # Triangle vertices projected on camera screen
@@ -718,6 +711,7 @@ class Camera(object):
                     vertex_a_z,
                     texture_a_u,
                     texture_a_v,
+                    texture_a_w,
                     normal_a_x,
                     normal_a_y,
                     normal_a_z,
@@ -728,6 +722,7 @@ class Camera(object):
                     vertex_b_z,
                     texture_b_u,
                     texture_b_v,
+                    texture_b_w,
                     normal_b_x,
                     normal_b_y,
                     normal_b_z,
@@ -738,6 +733,7 @@ class Camera(object):
                     vertex_c_z,
                     texture_c_u,
                     texture_c_v,
+                    texture_c_w,
                     normal_c_x,
                     normal_c_y,
                     normal_c_z,

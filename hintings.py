@@ -15,15 +15,15 @@ Point3DType = tuple[float, float, float]
 RotationType = tuple[float, float]
 Vertex3DType = tuple[float, float, float]
 TriangleVerticesType = tuple[Vertex3DType, Vertex3DType, Vertex3DType]
-Texture2DType = tuple[float, float]
-TriangleTexturesType = tuple[Texture2DType, Texture2DType, Texture2DType]
+Texture3DType = tuple[float, float, float]
+TriangleTexturesType = tuple[Texture3DType, Texture3DType, Texture3DType]
 Normal3DType = tuple[float, float, float]
 TriangleNormalsType = tuple[Normal3DType, Normal3DType, Normal3DType]
 FrustumBorderType = tuple[  # left right top bottom near far
     float, float, float, float, float, float
 ]
-Vertex3DTexture2DNormal3DType = tuple[  # X Y Z U V X Y Z
-    float, float, float, float, float, float, float, float
+Vertex3DTexture3DNormal3DType = tuple[  # X Y Z U V W X Y Z
+    float, float, float, float, float, float, float, float, float
 ]
 PixelCoordinateType = tuple[int, int]  # X Y on camera screen
 PixelDataType = tuple[int, int, int, int, int]  # X Y R G B
