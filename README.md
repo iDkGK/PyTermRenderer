@@ -31,7 +31,7 @@ PyTermRenderer, written in Python3, is a tool to display PNGs, or to render and 
 ## Features
 
 - Performance counted on
-- No third-party lib needed
+- No third-party libs needed (running well without libs inside requirements.txt)
 - Well type hinted, thus IDE friendly
 
 ## References
