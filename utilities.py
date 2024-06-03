@@ -166,9 +166,9 @@ def get_textured_line_bresenham(
                 )
                 gamma = 1 - alpha - beta
             u = alpha * u_a + beta * u_b + gamma * u_c
-            v = alpha * v_a + beta * v_b + gamma * v_c
-            texture_y = min(max(0, int(v * texture_height)), texture_height)
+            v = 1 - alpha * v_a - beta * v_b - gamma * v_c
             texture_x = min(max(0, int(u * texture_width)), texture_width)
+            texture_y = min(max(0, int(v * texture_height)), texture_height)
             r, g, b, a = texture_image[texture_y][texture_x]
             line[interpolation] = (r, g, b, a, 9608)
         if interpolation == destination:
@@ -228,9 +228,9 @@ def get_textured_line_bresenham_xy(
                 )
                 gamma = 1 - alpha - beta
             u = alpha * u_a + beta * u_b + gamma * u_c
-            v = alpha * v_a + beta * v_b + gamma * v_c
-            texture_y = min(max(0, int(v * texture_height)), texture_height)
+            v = 1 - alpha * v_a - beta * v_b - gamma * v_c
             texture_x = min(max(0, int(u * texture_width)), texture_width)
+            texture_y = min(max(0, int(v * texture_height)), texture_height)
             r, g, b, a = texture_image[texture_y][texture_x]
             line[interpolation] = (r, g, b, a, 9608)
         if interpolation == destination:
@@ -493,11 +493,16 @@ class Object(object):
         faces: list[tuple[tuple[int, ...], ...]] = []
         for line in Path(filepath).read_text().strip().splitlines():
             data_type, *data = line.strip().split()
-            if data_type == "o":
+            if data_type == "mtllib":
+                pass
+            elif data_type == "o":
                 self._name = " ".join(data)
             elif data_type == "v":
                 x, y, z, *_ = map(float, data)
                 vertices.append((x, y, z))
+            elif data_type == "vn":
+                x, y, z, *_ = map(float, data)
+                normals.append((x, y, z))
             elif data_type == "vt":
                 u, *vw = map(float, data)
                 if len(vw) == 2:
@@ -507,21 +512,24 @@ class Object(object):
                 else:
                     v = w = 0.0
                 textures.append((u, v, w))
-            elif data_type == "vn":
-                x, y, z, *_ = map(float, data)
-                normals.append((x, y, z))
             elif data_type == "s":
                 (data,) = data
                 if data == "off":
                     group_number = None  # type: ignore
                 else:
                     group_number = int(data)  # type: ignore
+            elif data_type == "usemtl":
+                model_filepath = Path(filepath)
+                material_filepath = model_filepath.parent / (
+                    "materials/%s.png" % model_filepath.stem
+                )
+                self._texture = PNG(material_filepath.as_posix()).decode()
             elif data_type == "f":
                 face_vertices_indices: list[int] | tuple[int, ...] = []
                 face_textures_indices: list[int] | tuple[int, ...] = []
                 face_normals_indices: list[int] | tuple[int, ...] = []
                 for part in data:
-                    v_index, vt_index, vn_index = part.split("/")  # type: ignore
+                    v_index, vt_index, vn_index = part.split("/")
                     face_vertices_indices.append(int(v_index) - 1)
                     face_textures_indices.append(int(vt_index) - 1)
                     face_normals_indices.append(int(vn_index) - 1)
@@ -532,12 +540,6 @@ class Object(object):
                         tuple(face_normals_indices),
                     )
                 )
-            elif data_type == "usemtl":
-                model_filepath = Path(filepath)
-                material_filepath = model_filepath.parent / (
-                    "materials/%s.png" % model_filepath.stem
-                )
-                self._texture = PNG(material_filepath.as_posix()).decode()
         for face_vertices_indices, face_textures_indices, face_normals_indices in faces:
             face_vertex_a_index, face_vertex_b_index, face_vertex_c_index, *_ = (
                 face_vertices_indices
