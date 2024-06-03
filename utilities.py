@@ -7,12 +7,12 @@ from threading import Lock
 
 from decoder import PNG
 from hintings import (
-    Coordinate2DType,
+    ScreenPoint2DType,
     FrameType,
     FrustumBorderType,
     ImageType,
     Normal3DType,
-    PixelRGBACType,
+    ScreenPixelDataType,
     Point3DType,
     RotationType,
     RowType,
@@ -31,9 +31,9 @@ def get_line_bresenham(
     vertex1: Vertex3DType,
     vertex2: Vertex3DType,
     frustum_border: FrustumBorderType,
-) -> dict[Coordinate2DType, PixelRGBACType]:
+) -> dict[ScreenPoint2DType, ScreenPixelDataType]:
     # Bresenham line algorithm
-    line: dict[Coordinate2DType, PixelRGBACType] = {}
+    line: dict[ScreenPoint2DType, ScreenPixelDataType] = {}
     left, right, top, bottom, near, far = frustum_border
     x1, y1, z1 = vertex1
     x2, y2, z2 = vertex2
@@ -68,9 +68,9 @@ def get_line_bresenham_xy(
     vertex1: Vertex2DType,
     vertex2: Vertex2DType,
     frustum_border: FrustumBorderType,
-) -> dict[Coordinate2DType, PixelRGBACType]:
+) -> dict[ScreenPoint2DType, ScreenPixelDataType]:
     # Bresenham line algorithm
-    line: dict[Coordinate2DType, PixelRGBACType] = {}
+    line: dict[ScreenPoint2DType, ScreenPixelDataType] = {}
     left, right, top, bottom, *_ = frustum_border
     x1, y1 = vertex1
     x2, y2 = vertex2
@@ -102,7 +102,7 @@ def get_line_sweepline(
     xsony_short: dict[int, list[int]],
     frustum_border: FrustumBorderType,
 ):
-    sweep_line: dict[Coordinate2DType, PixelRGBACType] = {}
+    sweep_line: dict[ScreenPoint2DType, ScreenPixelDataType] = {}
     for y_shared, xs_short in xsony_short.items():
         if y_shared not in xsony_long:
             continue
@@ -128,9 +128,9 @@ def get_textured_line_bresenham(
     frustum_border: FrustumBorderType,
     texture_image: ImageType,
     texture_size: tuple[int, int],
-) -> dict[Coordinate2DType, PixelRGBACType]:
+) -> dict[ScreenPoint2DType, ScreenPixelDataType]:
     # Bresenham line algorithm
-    line: dict[Coordinate2DType, PixelRGBACType] = {}
+    line: dict[ScreenPoint2DType, ScreenPixelDataType] = {}
     left, right, top, bottom, near, far = frustum_border
     x_a, y_a, z_a, u_a, v_a, *_ = vertex_texture_normal_a
     x_b, y_b, z_b, u_b, v_b, *_ = vertex_texture_normal_b
@@ -193,9 +193,9 @@ def get_textured_line_bresenham_xy(
     frustum_border: FrustumBorderType,
     texture_image: ImageType,
     texture_size: tuple[int, int],
-) -> dict[Coordinate2DType, PixelRGBACType]:
+) -> dict[ScreenPoint2DType, ScreenPixelDataType]:
     # Bresenham line algorithm
-    line: dict[Coordinate2DType, PixelRGBACType] = {}
+    line: dict[ScreenPoint2DType, ScreenPixelDataType] = {}
     left, right, top, bottom, *_ = frustum_border
     x_a, y_a, _, u_a, v_a, *_ = vertex_texture_normal_a
     x_b, y_b, _, u_b, v_b, *_ = vertex_texture_normal_b
@@ -255,7 +255,7 @@ def get_textured_line_sweepline(
     texture_image: ImageType,
     texture_size: tuple[int, int],
 ):
-    sweep_line: dict[Coordinate2DType, PixelRGBACType] = {}
+    sweep_line: dict[ScreenPoint2DType, ScreenPixelDataType] = {}
     for y_shared, xs_short in xsony_short.items():
         if y_shared not in xsony_long:
             continue
@@ -296,7 +296,7 @@ def render_mesh_line_no_culling(
     frustum_border: FrustumBorderType,
     texture_image: ImageType | None,
     texture_size: tuple[int, int] | None,
-) -> dict[Coordinate2DType, PixelRGBACType]:
+) -> dict[ScreenPoint2DType, ScreenPixelDataType]:
     x_a, y_a, z_a, *_ = vertex_texture_normal_a
     x_b, y_b, z_b, *_ = vertex_texture_normal_b
     x_c, y_c, z_c, *_ = vertex_texture_normal_c
@@ -317,7 +317,7 @@ def render_mesh_line_backface_culling(
     frustum_border: FrustumBorderType,
     texture_image: ImageType | None,
     texture_size: tuple[int, int] | None,
-) -> dict[Coordinate2DType, PixelRGBACType]:
+) -> dict[ScreenPoint2DType, ScreenPixelDataType]:
     x_a, y_a, z_a, *_ = vertex_texture_normal_a
     x_b, y_b, z_b, *_ = vertex_texture_normal_b
     x_c, y_c, z_c, *_ = vertex_texture_normal_c
@@ -342,7 +342,7 @@ def render_untextured_model(
     frustum_border: FrustumBorderType,
     texture_image: ImageType | None,
     texture_size: tuple[int, int] | None,
-) -> dict[Coordinate2DType, PixelRGBACType]:
+) -> dict[ScreenPoint2DType, ScreenPixelDataType]:
     x_a, y_a, z_a, *_ = vertex_texture_normal_a
     x_b, y_b, z_b, *_ = vertex_texture_normal_b
     x_c, y_c, z_c, *_ = vertex_texture_normal_c
@@ -394,7 +394,7 @@ def render_textured_model(
     frustum_border: FrustumBorderType,
     texture_image: ImageType | None,
     texture_size: tuple[int, int] | None,
-) -> dict[Coordinate2DType, PixelRGBACType]:
+) -> dict[ScreenPoint2DType, ScreenPixelDataType]:
     if texture_image is None or texture_size is None:
         return {}
     x_a, y_a, *_ = vertex_texture_normal_a
@@ -595,7 +595,40 @@ class Object(object):
 
     # Update methods
     def update(self, delta_time: float = 0.0) -> None:
-        pass
+        triangles: set[
+            tuple[
+                TriangleVerticesType,
+                TriangleTexturesType,
+                TriangleNormalsType,
+            ]
+        ] = set()
+        sin_θ = math.sin(math.radians(30 * delta_time))
+        cos_θ = math.cos(math.radians(30 * delta_time))
+        for vertices, textures, normals in self._triangles:
+            (
+                (vertex_a_x, vertex_a_y, vertex_a_z),
+                (vertex_b_x, vertex_b_y, vertex_b_z),
+                (vertex_c_x, vertex_c_y, vertex_c_z),
+            ) = vertices
+            vertices = (
+                (
+                    vertex_a_x * cos_θ - vertex_a_z * sin_θ,
+                    vertex_a_y,
+                    vertex_a_x * sin_θ + vertex_a_z * cos_θ,
+                ),
+                (
+                    vertex_b_x * cos_θ - vertex_b_z * sin_θ,
+                    vertex_b_y,
+                    vertex_b_x * sin_θ + vertex_b_z * cos_θ,
+                ),
+                (
+                    vertex_c_x * cos_θ - vertex_c_z * sin_θ,
+                    vertex_c_y,
+                    vertex_c_x * sin_θ + vertex_c_z * cos_θ,
+                ),
+            )
+            triangles.add((vertices, textures, normals))
+        self._triangles = triangles
 
     # Camera-related methods
     def show_to(self, camera: "Camera") -> None:
@@ -657,7 +690,7 @@ class Camera(object):
         self._dash_speed = abs(dash_speed)
         self._controllable = controllable
         self._objects: set[Object] = set()
-        self._pixels: dict[Coordinate2DType, PixelRGBACType] = {}
+        self._pixels: dict[ScreenPoint2DType, ScreenPixelDataType] = {}
         self._information: list[str] = []
         self._delta_time = 0.0
         # Register controller
@@ -983,7 +1016,7 @@ class Camera(object):
 
     def _update_objects(self, delta_time: float) -> None:
         # Iteration over all triangles. Assuming that every triangle is ▲abc
-        self._pixels: dict[Coordinate2DType, PixelRGBACType] = {}
+        self._pixels: dict[ScreenPoint2DType, ScreenPixelDataType] = {}
         for obj in self._objects:
             if obj.texture is None:
                 texture_image = None
@@ -992,24 +1025,22 @@ class Camera(object):
                 texture_image = obj.texture.image_data
                 texture_width, texture_height = obj.texture.image_size
                 texture_size = (texture_width - 1, texture_height - 1)
-            for vertices_texture_normals in obj.triangles:
+            for vertices, textures, normals in obj.triangles:
                 (
-                    (
-                        (vertex_a_x, vertex_a_y, vertex_a_z),
-                        (vertex_b_x, vertex_b_y, vertex_b_z),
-                        (vertex_c_x, vertex_c_y, vertex_c_z),
-                    ),
-                    (
-                        (texture_a_u, texture_a_v, texture_a_w),
-                        (texture_b_u, texture_b_v, texture_b_w),
-                        (texture_c_u, texture_c_v, texture_c_w),
-                    ),
-                    (
-                        (normal_a_x, normal_a_y, normal_a_z),
-                        (normal_b_x, normal_b_y, normal_b_z),
-                        (normal_c_x, normal_c_y, normal_c_z),
-                    ),
-                ) = vertices_texture_normals
+                    (vertex_a_x, vertex_a_y, vertex_a_z),
+                    (vertex_b_x, vertex_b_y, vertex_b_z),
+                    (vertex_c_x, vertex_c_y, vertex_c_z),
+                ) = vertices
+                (
+                    (texture_a_u, texture_a_v, texture_a_w),
+                    (texture_b_u, texture_b_v, texture_b_w),
+                    (texture_c_u, texture_c_v, texture_c_w),
+                ) = textures
+                (
+                    (normal_a_x, normal_a_y, normal_a_z),
+                    (normal_b_x, normal_b_y, normal_b_z),
+                    (normal_c_x, normal_c_y, normal_c_z),
+                ) = normals
                 # Position
                 # Using vector for relative position
                 (vertex_a_x, vertex_a_y, vertex_a_z) = (
