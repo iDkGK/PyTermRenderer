@@ -701,19 +701,27 @@ class Camera(object):
         try:
             import keyboard
 
+            keyboard.press("enter")
         except ImportError:
             keyboard = None
             warnings.warn(
-                "no third-party support for keyboard. Using custom KeyboardListener."
+                "no support for third-party keyboard library. "
+                "If it's on Linux, install it via `pip install keyboard`. "
+                "Then running the `main.py` as root. "
             )
+            warnings.warn("Using custom KeyboardListener for camera controlling.")
         try:
             import mouse  # type: ignore
 
+            mouse.move(self._screen_width, self._screen_height)  # type: ignore
         except ImportError:
             mouse = None
             warnings.warn(
-                "no third-party support for mouse. Using custom KeyboardListener."
+                "no support for third-party mouse library. "
+                "If it's on Linux, install it via `pip install mouse`. "
+                "Then running the `main.py` as root. "
             )
+            warnings.warn("Using custom KeyboardListener for camera controlling.")
         # keyboard = mouse = None
         if keyboard is None or mouse is None:
             keyboard_listener = KeyboardListener()
