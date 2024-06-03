@@ -8,7 +8,6 @@ from threading import Lock
 from backend import DigitalTimeUnit, Fake3DSceneGame, TheMatrixCodeRain
 from controller import KeyboardListener
 from decoder import PNG, PNGSequence
-from hintings import FramesType
 from display import (
     clear_screen,
     display_ascii,
@@ -16,6 +15,7 @@ from display import (
     display_gray,
     display_rgba,
 )
+from hintings import FramesType
 
 
 class InvalidLockStatusError(Exception):
