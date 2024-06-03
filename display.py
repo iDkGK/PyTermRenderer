@@ -49,7 +49,7 @@ __fps_counters__: deque[float] = deque(maxlen=30)
 __time_counter__ = time.perf_counter_ns()
 
 
-def __display_average_fps__() -> None:
+def __pring_average_fps__() -> None:
     if len(__fps_counters__) == 0:
         return
     screen_width, screen_height = os.get_terminal_size()
@@ -71,12 +71,12 @@ def __display_average_fps__() -> None:
     )
 
 
-def render_frame(frame: FrameType, fps: int) -> None:
-    """Render target frame with provided RGBA colored foreground characters and background
+def display_frame(frame: FrameType, fps: int) -> None:
+    """Display target frame with provided RGBA colored foreground characters and background
     Single pixel data: (R, G, B, A, character)
 
     Args:
-        frame (FrameType): frame buffer to render
+        frame (FrameType): frame buffer to display
         fps (int): fps limit. 0 means unlimited. Defaults to 0
     """
     global __screen_width__, __screen_height__, __frame_buffer__, __time_counter__
@@ -114,12 +114,12 @@ def render_frame(frame: FrameType, fps: int) -> None:
     print(end="\x1b];%.1f fps\a" % __fps_counters__[-1], flush=True)
 
 
-def render_ascii(frame: FrameType, fps: int) -> None:
-    """Render target frame with varying-density ASCII foreground characters
+def display_ascii(frame: FrameType, fps: int) -> None:
+    """Display target frame with varying-density ASCII foreground characters
     Single pixel data: (R, G, B, A)
 
     Args:
-        frame (FrameType): frame buffer to render
+        frame (FrameType): frame buffer to display
         fps (int): fps limit. 0 means unlimited. Defaults to 0
     """
     global __screen_width__, __screen_height__, __ascii_buffer__, __time_counter__
@@ -172,14 +172,13 @@ def render_ascii(frame: FrameType, fps: int) -> None:
     print(end="\x1b];%.1f fps\a" % __fps_counters__[-1], flush=True)
 
 
-def render_gray(frame: FrameType, fps: int) -> None:
-    """Render target frame with grayscale colored background
+def display_gray(frame: FrameType, fps: int) -> None:
+    """Display target frame with grayscale colored background
     Single pixel data: (R, G, B, A)
 
     Args:
-        frame (FrameType): frame buffer to render
+        frame (FrameType): frame buffer to display
         fps (int): fps limit. 0 means unlimited. Defaults to 0
-        size (tuple[int, int]): target rendering size
     """
     global __screen_width__, __screen_height__, __gray_buffer__, __time_counter__
     if frame:
@@ -225,14 +224,13 @@ def render_gray(frame: FrameType, fps: int) -> None:
     print(end="\x1b];%.1f fps\a" % __fps_counters__[-1], flush=True)
 
 
-def render_rgba(frame: FrameType, fps: int) -> None:
-    """Render target frame with RGBA colored background
+def display_rgba(frame: FrameType, fps: int) -> None:
+    """Display target frame with RGBA colored background
     Single pixel data: (R, G, B, A)
 
     Args:
-        frame (FrameType): frame buffer to render
+        frame (FrameType): frame buffer to display
         fps (int): fps limit. 0 means unlimited. Defaults to 0
-        size (tuple[int, int]): target rendering size
     """
     global __screen_width__, __screen_height__, __rgba_buffer__, __time_counter__
     if frame:
@@ -278,7 +276,7 @@ def clear_screen(mode: int = 2) -> None:
     print(end="\x1b[%sJ" % mode, flush=True)
 
 
-atexit.register(__display_average_fps__)
+atexit.register(__pring_average_fps__)
 
 
 if __name__ == "__main__":
@@ -295,6 +293,6 @@ if __name__ == "__main__":
         ]
         for y in range(0, screen_height)
     ]
-    for render in (render_ascii, render_gray, render_rgba):
-        render(frame_buffer, fps=0)
+    for display_funcion in (display_ascii, display_gray, display_rgba):
+        display_funcion(frame_buffer, fps=0)
         time.sleep(1)

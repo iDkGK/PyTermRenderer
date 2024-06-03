@@ -2,7 +2,7 @@
 
 ## _Terminal Renderer Written in Python3_
 
-PyTermRenderer, written in Python3, is a tool to render images, or to create and render some awesome effects in 256-color terminals.
+PyTermRenderer, written in Python3, is a tool to display PNGs, or to render and display some awesome effects in 256-color terminals.
 
 ## Modules & APIs
 
@@ -19,11 +19,11 @@ PyTermRenderer, written in Python3, is a tool to render images, or to create and
   - `PNGSequence` - a decoder class for retriving data from multiple PNG files, A.K.A PNG sequence
 - hintings.py - custom type bindings for IDE level type hinting
 - main.py - the entry point of this project
-- renderer.py - providing different kinds of rendering APIs
-  - `render_frame` - a function to render a frame of RGBA colors and characters
-  - `render_ascii` - a function to render a frame of RGBA colors with ASCII letters
-  - `render_gray` - a function to render a frame of RGBA colors in grayscale mode
-  - `render_rgba` - a function to render a frame with RGBA colored background
+- display.py - providing different kinds of displaying APIs
+  - `display_frame` - a function to display a frame of RGBA colors and characters
+  - `display_ascii` - a function to display a frame of RGBA colors with ASCII letters
+  - `display_gray` - a function to display a frame of RGBA colors in grayscale mode
+  - `display_rgba` - a function to display a frame with RGBA colored background
   - `clear_screen` - a function to clear terminal screen
 - utilities.py - providing some handy functions or classes
   - ...

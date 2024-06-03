@@ -9,7 +9,13 @@ from backend import DigitalTimeUnit, Fake3DSceneGame, TheMatrixCodeRain
 from controller import KeyboardListener
 from decoder import PNG, PNGSequence
 from hintings import FramesType
-from renderer import clear_screen, render_ascii, render_frame, render_gray, render_rgba
+from display import (
+    clear_screen,
+    display_ascii,
+    display_frame,
+    display_gray,
+    display_rgba,
+)
 
 
 class InvalidLockStatusError(Exception):
@@ -19,32 +25,32 @@ class InvalidLockStatusError(Exception):
 def play_code_rain_animation(fps: int = 15) -> None:
     code_rain = TheMatrixCodeRain(mode="long")
     for frame in code_rain.frames:
-        render_frame(frame, fps=fps)
+        display_frame(frame, fps=fps)
 
 
 def play_digital_clock_animation(fps: int = 10) -> None:
     time_clock = DigitalTimeUnit()
     for frame in time_clock.frames:
-        render_frame(frame, fps=fps)
+        display_frame(frame, fps=fps)
 
 
 def play_fake_3d_scene_game(fps: int = 60) -> None:
     scene_game = Fake3DSceneGame()
     for frame in scene_game.frames:
-        render_frame(frame, fps=fps)
+        display_frame(frame, fps=fps)
 
 
 def display_static_png_image(fps: int = 0) -> None:
     example_png = PNG("resource/images/example.png").decode()
-    render_ascii(example_png.image_data, fps)
-    render_gray(example_png.image_data, fps)
-    render_rgba(example_png.image_data, fps)
+    display_ascii(example_png.image_data, fps)
+    display_gray(example_png.image_data, fps)
+    display_rgba(example_png.image_data, fps)
 
 
 def play_dynamic_png_images_ascii(fps: int = 0) -> None:
 
     holder_lock = Lock()
-    renderer_lock = Lock()
+    display_lock = Lock()
     keyboard_listener = KeyboardListener()
     example_png_sequence_ascii = PNGSequence(
         "resource/images/sequence/tom&jerry"
@@ -57,16 +63,16 @@ def play_dynamic_png_images_ascii(fps: int = 0) -> None:
     ).decode_all()
 
     def switch() -> None:
-        if holder_lock.locked() and renderer_lock.locked():
+        if holder_lock.locked() and display_lock.locked():
             holder_lock.release()
-            renderer_lock.release()
-        elif holder_lock.locked() and not renderer_lock.locked():
+            display_lock.release()
+        elif holder_lock.locked() and not display_lock.locked():
             raise InvalidLockStatusError(
-                "holder lock is locked while renderer lock is released."
+                "holder lock is locked while display lock is released."
             )
         else:
             while not holder_lock.locked():
-                if renderer_lock.acquire():
+                if display_lock.acquire():
                     holder_lock.acquire()
 
     keyboard_listener.register(" ", switch)
@@ -76,33 +82,33 @@ def play_dynamic_png_images_ascii(fps: int = 0) -> None:
         hit_key_hex = hit_key.encode().hex()
         if hit_key_hex in ("03", "1a", "1b", "1c"):
             break
-        renderer_lock.acquire()
-        render_ascii(example_png.image_data, fps)
-        renderer_lock.release()
+        display_lock.acquire()
+        display_ascii(example_png.image_data, fps)
+        display_lock.release()
 
     for example_png in example_png_sequence_gray:
         hit_key = keyboard_listener.get()
         hit_key_hex = hit_key.encode().hex()
         if hit_key_hex in ("03", "1a", "1b", "1c"):
             break
-        renderer_lock.acquire()
-        render_gray(example_png.image_data, fps)
-        renderer_lock.release()
+        display_lock.acquire()
+        display_gray(example_png.image_data, fps)
+        display_lock.release()
 
     for example_png in example_png_sequence_rgba:
         hit_key = keyboard_listener.get()
         hit_key_hex = hit_key.encode().hex()
         if hit_key_hex in ("03", "1a", "1b", "1c"):
             break
-        renderer_lock.acquire()
-        render_rgba(example_png.image_data, fps)
-        renderer_lock.release()
+        display_lock.acquire()
+        display_rgba(example_png.image_data, fps)
+        display_lock.release()
 
     keyboard_listener.stop()
     if holder_lock.locked():
         holder_lock.release()
-    if renderer_lock.locked():
-        renderer_lock.release()
+    if display_lock.locked():
+        display_lock.release()
 
 
 def _decode_processor(
@@ -167,20 +173,20 @@ def play_dynamic_png_images_in_parallel(fps: int = 0) -> None:
     while len(indexed_frames_lists) < generator_count:
         indexed_frames_lists.append(generator_queue.get())
     holder_lock = Lock()
-    renderer_lock = Lock()
+    display_lock = Lock()
     keyboard_listener = KeyboardListener()
 
     def switch() -> None:
-        if holder_lock.locked() and renderer_lock.locked():
+        if holder_lock.locked() and display_lock.locked():
             holder_lock.release()
-            renderer_lock.release()
-        elif holder_lock.locked() and not renderer_lock.locked():
+            display_lock.release()
+        elif holder_lock.locked() and not display_lock.locked():
             raise InvalidLockStatusError(
-                "holder lock is locked while renderer lock is released."
+                "holder lock is locked while display lock is released."
             )
         else:
             while not holder_lock.locked():
-                if renderer_lock.acquire():
+                if display_lock.acquire():
                     holder_lock.acquire()
 
     keyboard_listener.register(" ", switch)
@@ -195,15 +201,15 @@ def play_dynamic_png_images_in_parallel(fps: int = 0) -> None:
         hit_key_hex = hit_key.encode().hex()
         if hit_key_hex in ("03", "1a", "1b", "1c"):
             break
-        renderer_lock.acquire()
-        render_ascii(frame, fps)
-        renderer_lock.release()
+        display_lock.acquire()
+        display_ascii(frame, fps)
+        display_lock.release()
 
     keyboard_listener.stop()
     if holder_lock.locked():
         holder_lock.release()
-    if renderer_lock.locked():
-        renderer_lock.release()
+    if display_lock.locked():
+        display_lock.release()
 
 
 if __name__ == "__main__":
