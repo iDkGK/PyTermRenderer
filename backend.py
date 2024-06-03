@@ -235,8 +235,8 @@ class Fake3DSceneGame(Backend):
             field_of_view=90,
             near_plane=0.0,
             far_plane=125.0,
-            coordinate=(-10.0, -(200**0.5), -10.0),
-            rotation=(45.0, 45.0),
+            coordinate=(-12.24744871391589, 10.0, -12.24744871391589),
+            rotation=(-30.0, 45.0),
             # coordinate=(0.0, 0.0, 0.0),
             # rotation=(0.0, 0.0),
         )
