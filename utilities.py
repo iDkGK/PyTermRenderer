@@ -127,7 +127,7 @@ def get_textured_line_bresenham(
     vertex_texture_normal_c: Vertex3DTexture3DNormal3DType,
     frustum_border: FrustumBorderType,
     texture_image: ImageType,
-    texture_size: tuple[int, int],
+    texture_size: tuple[float, float],
 ) -> dict[ScreenPoint2DType, ScreenPixelDataType]:
     # Bresenham line algorithm
     line: dict[ScreenPoint2DType, ScreenPixelDataType] = {}
@@ -167,8 +167,8 @@ def get_textured_line_bresenham(
                 gamma = 1 - alpha - beta
             u = alpha * u_a + beta * u_b + gamma * u_c
             v = 1 - alpha * v_a - beta * v_b - gamma * v_c
-            texture_x = min(max(0, int(u * texture_width)), texture_width)
-            texture_y = min(max(0, int(v * texture_height)), texture_height)
+            texture_x = min(max(0, int(u * texture_width)), int(texture_width))
+            texture_y = min(max(0, int(v * texture_height)), int(texture_height))
             r, g, b, a = texture_image[texture_y][texture_x]
             line[interpolation] = (r, g, b, a, 9608)
         if interpolation == destination:
@@ -192,7 +192,7 @@ def get_textured_line_bresenham_xy(
     vertex2: Vertex2DType,
     frustum_border: FrustumBorderType,
     texture_image: ImageType,
-    texture_size: tuple[int, int],
+    texture_size: tuple[float, float],
 ) -> dict[ScreenPoint2DType, ScreenPixelDataType]:
     # Bresenham line algorithm
     line: dict[ScreenPoint2DType, ScreenPixelDataType] = {}
@@ -229,8 +229,8 @@ def get_textured_line_bresenham_xy(
                 gamma = 1 - alpha - beta
             u = alpha * u_a + beta * u_b + gamma * u_c
             v = 1 - alpha * v_a - beta * v_b - gamma * v_c
-            texture_x = min(max(0, int(u * texture_width)), texture_width)
-            texture_y = min(max(0, int(v * texture_height)), texture_height)
+            texture_x = min(max(0, int(u * texture_width)), int(texture_width))
+            texture_y = min(max(0, int(v * texture_height)), int(texture_height))
             r, g, b, a = texture_image[texture_y][texture_x]
             line[interpolation] = (r, g, b, a, 9608)
         if interpolation == destination:
@@ -253,7 +253,7 @@ def get_textured_line_sweepline(
     xsony_short: dict[int, list[int]],
     frustum_border: FrustumBorderType,
     texture_image: ImageType,
-    texture_size: tuple[int, int],
+    texture_size: tuple[float, float],
 ):
     sweep_line: dict[ScreenPoint2DType, ScreenPixelDataType] = {}
     for y_shared, xs_short in xsony_short.items():
@@ -295,7 +295,7 @@ def render_mesh_line_no_culling(
     vertex_texture_normal_c: Vertex3DTexture3DNormal3DType,
     frustum_border: FrustumBorderType,
     texture_image: ImageType | None,
-    texture_size: tuple[int, int] | None,
+    texture_size: tuple[float, float] | None,
 ) -> dict[ScreenPoint2DType, ScreenPixelDataType]:
     x_a, y_a, z_a, *_ = vertex_texture_normal_a
     x_b, y_b, z_b, *_ = vertex_texture_normal_b
@@ -316,7 +316,7 @@ def render_mesh_line_backface_culling(
     vertex_texture_normal_c: Vertex3DTexture3DNormal3DType,
     frustum_border: FrustumBorderType,
     texture_image: ImageType | None,
-    texture_size: tuple[int, int] | None,
+    texture_size: tuple[float, float] | None,
 ) -> dict[ScreenPoint2DType, ScreenPixelDataType]:
     x_a, y_a, z_a, *_ = vertex_texture_normal_a
     x_b, y_b, z_b, *_ = vertex_texture_normal_b
@@ -341,7 +341,7 @@ def render_untextured_model(
     vertex_texture_normal_c: Vertex3DTexture3DNormal3DType,
     frustum_border: FrustumBorderType,
     texture_image: ImageType | None,
-    texture_size: tuple[int, int] | None,
+    texture_size: tuple[float, float] | None,
 ) -> dict[ScreenPoint2DType, ScreenPixelDataType]:
     x_a, y_a, z_a, *_ = vertex_texture_normal_a
     x_b, y_b, z_b, *_ = vertex_texture_normal_b
@@ -393,7 +393,7 @@ def render_textured_model(
     vertex_texture_normal_c: Vertex3DTexture3DNormal3DType,
     frustum_border: FrustumBorderType,
     texture_image: ImageType | None,
-    texture_size: tuple[int, int] | None,
+    texture_size: tuple[float, float] | None,
 ) -> dict[ScreenPoint2DType, ScreenPixelDataType]:
     if texture_image is None or texture_size is None:
         return {}
@@ -1055,7 +1055,7 @@ class Camera(object):
             else:
                 texture_image = obj.texture.image_data
                 texture_width, texture_height = obj.texture.image_size
-                texture_size = (texture_width - 1, texture_height - 1)
+                texture_size = (texture_width - 1e-8, texture_height - 1e-8)
             for vertices, textures, normals in obj.triangles:
                 (
                     (vertex_a_x, vertex_a_y, vertex_a_z),
