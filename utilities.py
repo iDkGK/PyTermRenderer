@@ -135,7 +135,9 @@ def get_textured_line_bresenham(
     x_a, y_a, z_a, u_a, v_a, *_ = vertex_texture_normal_a
     x_b, y_b, z_b, u_b, v_b, *_ = vertex_texture_normal_b
     x_c, y_c, _, u_c, v_c, *_ = vertex_texture_normal_c
-    x_a, y_a, x_b, y_b = int(x_a), int(y_a), int(x_b), int(y_b)
+    x_a, y_a = int(x_a), int(y_a)
+    x_b, y_b = int(x_b), int(y_b)
+    x_c, y_c = int(x_c), int(y_c)
     x, y, z = x_a, y_a, z_a
     texture_width, texture_height = texture_size
     destination = (x_b, y_b)
