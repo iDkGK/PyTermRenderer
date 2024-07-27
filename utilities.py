@@ -134,7 +134,10 @@ def get_textured_line_bresenham(
     left, right, top, bottom, near, far = frustum_border
     x_a, y_a, z_a, u_a, v_a, *_ = vertex_texture_normal_a
     x_b, y_b, z_b, u_b, v_b, *_ = vertex_texture_normal_b
-    x_c, y_c, _, u_c, v_c, *_ = vertex_texture_normal_c
+    x_c, y_c, z_c, u_c, v_c, *_ = vertex_texture_normal_c
+    w_a = 1 / z_a if z_a != 0 else 0
+    w_b = 1 / z_b if z_b != 0 else 0
+    w_c = 1 / z_c if z_c != 0 else 0
     x_a, y_a = int(x_a), int(y_a)
     x_b, y_b = int(x_b), int(y_b)
     x_c, y_c = int(x_c), int(y_c)
@@ -167,8 +170,9 @@ def get_textured_line_bresenham(
                     denominator
                 )
                 gamma = 1 - alpha - beta
-            u = alpha * u_a + beta * u_b + gamma * u_c
-            v = 1 - alpha * v_a - beta * v_b - gamma * v_c
+            w = alpha * w_a + beta * w_b + gamma * w_c
+            u = (alpha * u_a * w_a + beta * u_b * w_b + gamma * u_c * w_c) / w
+            v = 1 - (alpha * v_a * w_a + beta * v_b * w_b + gamma * v_c * w_c) / w
             texture_x = min(max(0, int(u * texture_width)), int(texture_width))
             texture_y = min(max(0, int(v * texture_height)), int(texture_height))
             r, g, b, a = texture_image[texture_y][texture_x]
@@ -199,9 +203,12 @@ def get_textured_line_bresenham_xy(
     # Bresenham line algorithm
     line: dict[ScreenPoint2DType, ScreenPixelDataType] = {}
     left, right, top, bottom, *_ = frustum_border
-    x_a, y_a, _, u_a, v_a, *_ = vertex_texture_normal_a
-    x_b, y_b, _, u_b, v_b, *_ = vertex_texture_normal_b
-    x_c, y_c, _, u_c, v_c, *_ = vertex_texture_normal_c
+    x_a, y_a, z_a, u_a, v_a, *_ = vertex_texture_normal_a
+    x_b, y_b, z_b, u_b, v_b, *_ = vertex_texture_normal_b
+    x_c, y_c, z_c, u_c, v_c, *_ = vertex_texture_normal_c
+    w_a = 1 / z_a if z_a != 0 else 0
+    w_b = 1 / z_b if z_b != 0 else 0
+    w_c = 1 / z_c if z_c != 0 else 0
     x1, y1 = vertex1
     x2, y2 = vertex2
     x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
@@ -229,8 +236,9 @@ def get_textured_line_bresenham_xy(
                     denominator
                 )
                 gamma = 1 - alpha - beta
-            u = alpha * u_a + beta * u_b + gamma * u_c
-            v = 1 - alpha * v_a - beta * v_b - gamma * v_c
+            w = alpha * w_a + beta * w_b + gamma * w_c
+            u = (alpha * u_a * w_a + beta * u_b * w_b + gamma * u_c * w_c) / w
+            v = 1 - (alpha * v_a * w_a + beta * v_b * w_b + gamma * v_c * w_c) / w
             texture_x = min(max(0, int(u * texture_width)), int(texture_width))
             texture_y = min(max(0, int(v * texture_height)), int(texture_height))
             r, g, b, a = texture_image[texture_y][texture_x]
