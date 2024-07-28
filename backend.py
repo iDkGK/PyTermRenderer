@@ -229,7 +229,10 @@ class Fake3DSceneGame(Backend):
     @property
     def frames(self) -> FramesType:
         # Create objects
-        target_object = Object("resource/models/crafting_table.obj")
+        target_object = Object(
+            "resource/models/crafting_table.obj",
+            coordinate=(0.0, 0.0, 0.0),
+        )
         smooth_camera = SmoothCamera(
             screen_size=os.get_terminal_size(),
             field_of_view=90,

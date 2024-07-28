@@ -7,15 +7,15 @@ from threading import Lock
 
 from decoder import PNG
 from hintings import (
-    ScreenPoint2DType,
     FrameType,
     FrustumBorderType,
     ImageType,
     Normal3DType,
-    ScreenPixelDataType,
     Point3DType,
     RotationType,
     RowType,
+    ScreenPixelDataType,
+    ScreenPoint2DType,
     Texture3DType,
     TriangleNormalsType,
     TriangleTexturesType,
@@ -485,8 +485,13 @@ def render_textured_model(
 
 
 class Object(object):
-    def __init__(self, filepath: str) -> None:
+    def __init__(
+        self,
+        filepath: str,
+        coordinate: Point3DType,
+    ) -> None:
         self._filepath = filepath
+        self._x, self._y, self._z = coordinate
         self._name = ""
         self._triangles: set[
             tuple[
@@ -560,22 +565,40 @@ class Object(object):
             face_normal_a_index, face_normal_b_index, face_normal_c_index, *_ = (
                 face_normals_indices
             )
+            vertex_a_x, vertex_a_y, vertex_a_z = vertices[face_vertex_a_index]
+            vertex_b_x, vertex_b_y, vertex_b_z = vertices[face_vertex_b_index]
+            vertex_c_x, vertex_c_y, vertex_c_z = vertices[face_vertex_c_index]
+            texture_a_u, texture_a_v, texture_a_w = textures[face_texture_a_index]
+            texture_b_u, texture_b_v, texture_b_w = textures[face_texture_b_index]
+            texture_c_u, texture_c_v, texture_c_w = textures[face_texture_c_index]
+            normal_a_x, normal_a_y, normal_a_z = normals[face_normal_a_index]
+            normal_b_x, normal_b_y, normal_b_z = normals[face_normal_b_index]
+            normal_c_x, normal_c_y, normal_c_z = normals[face_normal_c_index]
+            vertex_a_x += self._x
+            vertex_a_y += self._y
+            vertex_a_z += self._z
+            vertex_b_x += self._x
+            vertex_b_y += self._y
+            vertex_b_z += self._z
+            vertex_c_x += self._x
+            vertex_c_y += self._y
+            vertex_c_z += self._z
             self._triangles.add(
                 (
                     (
-                        vertices[face_vertex_a_index],
-                        vertices[face_vertex_b_index],
-                        vertices[face_vertex_c_index],
+                        (vertex_a_x, vertex_a_y, vertex_a_z),
+                        (vertex_b_x, vertex_b_y, vertex_b_z),
+                        (vertex_c_x, vertex_c_y, vertex_c_z),
                     ),
                     (
-                        textures[face_texture_a_index],
-                        textures[face_texture_b_index],
-                        textures[face_texture_c_index],
+                        (texture_a_u, texture_a_v, texture_a_w),
+                        (texture_b_u, texture_b_v, texture_b_w),
+                        (texture_c_u, texture_c_v, texture_c_w),
                     ),
                     (
-                        normals[face_normal_a_index],
-                        normals[face_normal_b_index],
-                        normals[face_normal_c_index],
+                        (normal_a_x, normal_a_y, normal_a_z),
+                        (normal_b_x, normal_b_y, normal_b_z),
+                        (normal_c_x, normal_c_y, normal_c_z),
                     ),
                 )
             )
