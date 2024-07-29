@@ -20,7 +20,6 @@ from hintings import (
     TriangleNormalsType,
     TriangleTexturesType,
     TriangleVerticesType,
-    Vertex2DType,
     Vertex3DTexture3DNormal3DType,
     Vertex3DType,
 )
@@ -50,7 +49,7 @@ def get_line_bresenham(
     while True:
         interpolation = (x1, y1)
         if left < x1 < right and bottom < y1 < top and near < z1 < far:
-            line[interpolation] = (255, 255, 255, 255, 9608)
+            line[interpolation] = (z1, 255, 255, 255, 255, 9608)
         if interpolation == destination:
             break
         double_error = 2 * error
@@ -64,64 +63,41 @@ def get_line_bresenham(
     return line
 
 
-def get_line_bresenham_xy(
-    vertex1: Vertex2DType,
-    vertex2: Vertex2DType,
-    frustum_border: FrustumBorderType,
-) -> dict[ScreenPoint2DType, ScreenPixelDataType]:
-    # Bresenham line algorithm
-    line: dict[ScreenPoint2DType, ScreenPixelDataType] = {}
-    left, right, top, bottom, *_ = frustum_border
-    x1, y1 = vertex1
-    x2, y2 = vertex2
-    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-    destination = (x2, y2)
-    delta_x = abs(x2 - x1)
-    delta_y = abs(y2 - y1)
-    step_x = 1 if x1 < x2 else -1
-    step_y = 1 if y1 < y2 else -1
-    error = delta_x - delta_y
-    while True:
-        interpolation = (x1, y1)
-        if left < x1 < right and bottom < y1 < top:
-            line[interpolation] = (255, 255, 255, 255, 9608)
-        if interpolation == destination:
-            break
-        double_error = 2 * error
-        if double_error > -delta_y:
-            error -= delta_y
-            x1 += step_x
-        if double_error < delta_x:
-            error += delta_x
-            y1 += step_y
-    return line
-
-
 def get_line_sweepline(
-    xsony_long: dict[int, list[int]],
-    xsony_short: dict[int, list[int]],
+    xzsony_long: dict[int, list[tuple[int, float]]],
+    xzsony_short: dict[int, list[tuple[int, float]]],
     frustum_border: FrustumBorderType,
 ):
     sweep_line: dict[ScreenPoint2DType, ScreenPixelDataType] = {}
-    for y_shared, xs_short in xsony_short.items():
-        if y_shared not in xsony_long:
+    for y_shared, xzs_short in xzsony_short.items():
+        if y_shared not in xzsony_long:
             continue
-        xs_long_sorted = sorted(xsony_long[y_shared])
-        x_long_min, x_long_max = xs_long_sorted[0], xs_long_sorted[-1]
-        xs_short_sorted = sorted(xs_short)
-        x_short_min, x_short_max = xs_short_sorted[0], xs_short_sorted[-1]
+        xs_long_sorted = sorted(xzsony_long[y_shared], key=lambda xzs: xzs[0])
+        (x_long_min, z_long_min), (x_long_max, z_long_max) = (
+            xs_long_sorted[0],
+            xs_long_sorted[-1],
+        )
+        xs_short_sorted = sorted(xzs_short, key=lambda xzs: xzs[0])
+        (x_short_min, z_short_min), (x_short_max, z_short_max) = (
+            xs_short_sorted[0],
+            xs_short_sorted[-1],
+        )
         if abs(x_long_min - x_short_max) < abs(x_long_max - x_short_min):
-            sweep_line |= get_line_bresenham_xy(
-                (x_long_min, y_shared), (x_short_max, y_shared), frustum_border
+            sweep_line |= get_line_bresenham(
+                (x_long_min, y_shared, z_long_min),
+                (x_short_max, y_shared, z_short_max),
+                frustum_border,
             )
         else:
-            sweep_line |= get_line_bresenham_xy(
-                (x_long_max, y_shared), (x_short_min, y_shared), frustum_border
+            sweep_line |= get_line_bresenham(
+                (x_long_max, y_shared, z_long_max),
+                (x_short_min, y_shared, z_short_min),
+                frustum_border,
             )
     return sweep_line
 
 
-def get_textured_line_bresenham(
+def get_textured_line_bresenham_margin(
     vertex_texture_normal_a: Vertex3DTexture3DNormal3DType,
     vertex_texture_normal_b: Vertex3DTexture3DNormal3DType,
     vertex_texture_normal_c: Vertex3DTexture3DNormal3DType,
@@ -176,7 +152,7 @@ def get_textured_line_bresenham(
             texture_x = min(max(0, int(u * texture_width)), int(texture_width))
             texture_y = min(max(0, int(v * texture_height)), int(texture_height))
             r, g, b, a = texture_image[texture_y][texture_x]
-            line[interpolation] = (r, g, b, a, 9608)
+            line[interpolation] = (z, r, g, b, a, 9608)
         if interpolation == destination:
             break
         double_error = 2 * error
@@ -190,39 +166,42 @@ def get_textured_line_bresenham(
     return line
 
 
-def get_textured_line_bresenham_xy(
+def get_textured_line_bresenham_padding(
     vertex_texture_normal_a: Vertex3DTexture3DNormal3DType,
     vertex_texture_normal_b: Vertex3DTexture3DNormal3DType,
     vertex_texture_normal_c: Vertex3DTexture3DNormal3DType,
-    vertex1: Vertex2DType,
-    vertex2: Vertex2DType,
+    vertex1: Vertex3DType,
+    vertex2: Vertex3DType,
     frustum_border: FrustumBorderType,
     texture_image: ImageType,
     texture_size: tuple[float, float],
 ) -> dict[ScreenPoint2DType, ScreenPixelDataType]:
     # Bresenham line algorithm
     line: dict[ScreenPoint2DType, ScreenPixelDataType] = {}
-    left, right, top, bottom, *_ = frustum_border
+    left, right, top, bottom, near, far = frustum_border
     x_a, y_a, z_a, u_a, v_a, *_ = vertex_texture_normal_a
     x_b, y_b, z_b, u_b, v_b, *_ = vertex_texture_normal_b
     x_c, y_c, z_c, u_c, v_c, *_ = vertex_texture_normal_c
     w_a = 1 / z_a if z_a != 0 else 0
     w_b = 1 / z_b if z_b != 0 else 0
     w_c = 1 / z_c if z_c != 0 else 0
-    x1, y1 = vertex1
-    x2, y2 = vertex2
+    x1, y1, z1 = vertex1
+    x2, y2, z2 = vertex2
     x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-    x, y = x1, y1
+    x, y, z = x1, y1, z1
     texture_width, texture_height = texture_size
     destination = (x2, y2)
     delta_x = abs(x2 - x1)
     delta_y = abs(y2 - y1)
+    delta_z = abs(z2 - z1)
+    steps = max(delta_x, delta_y)
     step_x = 1 if x1 < x2 else -1
     step_y = 1 if y1 < y2 else -1
+    step_z = 0.0 if steps == 0.0 else (delta_z / steps if z1 < z2 else -delta_z / steps)
     error = delta_x - delta_y
     while True:
         interpolation = (x, y)
-        if left < x < right and bottom < y < top:
+        if left < x < right and bottom < y < top and near < z < far:
             denominator = (y_b - y_c) * (x_a - x_c) + (x_c - x_b) * (y_a - y_c)
             if denominator == 0.0:
                 alpha = 0.0
@@ -242,7 +221,7 @@ def get_textured_line_bresenham_xy(
             texture_x = min(max(0, int(u * texture_width)), int(texture_width))
             texture_y = min(max(0, int(v * texture_height)), int(texture_height))
             r, g, b, a = texture_image[texture_y][texture_x]
-            line[interpolation] = (r, g, b, a, 9608)
+            line[interpolation] = (z, r, g, b, a, 9608)
         if interpolation == destination:
             break
         double_error = 2 * error
@@ -252,6 +231,7 @@ def get_textured_line_bresenham_xy(
         if double_error < delta_x:
             error += delta_x
             y += step_y
+        z += step_z
     return line
 
 
@@ -259,38 +239,44 @@ def get_textured_line_sweepline(
     vertex_texture_normal_a: Vertex3DTexture3DNormal3DType,
     vertex_texture_normal_b: Vertex3DTexture3DNormal3DType,
     vertex_texture_normal_c: Vertex3DTexture3DNormal3DType,
-    xsony_long: dict[int, list[int]],
-    xsony_short: dict[int, list[int]],
+    xzsony_long: dict[int, list[tuple[int, float]]],
+    xzsony_short: dict[int, list[tuple[int, float]]],
     frustum_border: FrustumBorderType,
     texture_image: ImageType,
     texture_size: tuple[float, float],
 ):
     sweep_line: dict[ScreenPoint2DType, ScreenPixelDataType] = {}
-    for y_shared, xs_short in xsony_short.items():
-        if y_shared not in xsony_long:
+    for y_shared, xzs_short in xzsony_short.items():
+        if y_shared not in xzsony_long:
             continue
-        xs_long_sorted = sorted(xsony_long[y_shared])
-        x_long_min, x_long_max = xs_long_sorted[0], xs_long_sorted[-1]
-        xs_short_sorted = sorted(xs_short)
-        x_short_min, x_short_max = xs_short_sorted[0], xs_short_sorted[-1]
+        xs_long_sorted = sorted(xzsony_long[y_shared], key=lambda xzs: xzs[0])
+        (x_long_min, z_long_min), (x_long_max, z_long_max) = (
+            xs_long_sorted[0],
+            xs_long_sorted[-1],
+        )
+        xs_short_sorted = sorted(xzs_short, key=lambda xzs: xzs[0])
+        (x_short_min, z_short_min), (x_short_max, z_short_max) = (
+            xs_short_sorted[0],
+            xs_short_sorted[-1],
+        )
         if abs(x_long_min - x_short_max) < abs(x_long_max - x_short_min):
-            sweep_line |= get_textured_line_bresenham_xy(
+            sweep_line |= get_textured_line_bresenham_padding(
                 vertex_texture_normal_a,
                 vertex_texture_normal_b,
                 vertex_texture_normal_c,
-                (x_long_min, y_shared),
-                (x_short_max, y_shared),
+                (x_long_min, y_shared, z_long_min),
+                (x_short_max, y_shared, z_short_max),
                 frustum_border,
                 texture_image,
                 texture_size,
             )
         else:
-            sweep_line |= get_textured_line_bresenham_xy(
+            sweep_line |= get_textured_line_bresenham_padding(
                 vertex_texture_normal_a,
                 vertex_texture_normal_b,
                 vertex_texture_normal_c,
-                (x_long_max, y_shared),
-                (x_short_min, y_shared),
+                (x_long_max, y_shared, z_long_max),
+                (x_short_min, y_shared, z_short_min),
                 frustum_border,
                 texture_image,
                 texture_size,
@@ -378,22 +364,22 @@ def render_untextured_model(
     line_ab = get_line_bresenham(vertex_a, vertex_b, frustum_border)
     line_bc = get_line_bresenham(vertex_b, vertex_c, frustum_border)
     # Longest line xs on y
-    xsony_ac: dict[int, list[int]] = {}
-    for x, y in line_ac:
-        xsony_ac.setdefault(y, [])
-        xsony_ac[y].append(x)
+    xzsony_ac: dict[int, list[tuple[int, float]]] = {}
+    for (x, y), (z, *_) in line_ac.items():
+        xzsony_ac.setdefault(y, [])
+        xzsony_ac[y].append((x, z))
     # Other lines xs on y
-    xsony_ab: dict[int, list[int]] = {}
-    for x, y in line_ab:
-        xsony_ab.setdefault(y, [])
-        xsony_ab[y].append(x)
-    xsony_bc: dict[int, list[int]] = {}
-    for x, y in line_bc:
-        xsony_bc.setdefault(y, [])
-        xsony_bc[y].append(x)
+    xzsony_ab: dict[int, list[tuple[int, float]]] = {}
+    for (x, y), (z, *_) in line_ab.items():
+        xzsony_ab.setdefault(y, [])
+        xzsony_ab[y].append((x, z))
+    xzsony_bc: dict[int, list[tuple[int, float]]] = {}
+    for (x, y), (z, *_) in line_bc.items():
+        xzsony_bc.setdefault(y, [])
+        xzsony_bc[y].append((x, z))
     # Sweep line algorithm
-    sweep_line_ab = get_line_sweepline(xsony_ac, xsony_ab, frustum_border)
-    sweep_line_bc = get_line_sweepline(xsony_ac, xsony_bc, frustum_border)
+    sweep_line_ab = get_line_sweepline(xzsony_ac, xzsony_ab, frustum_border)
+    sweep_line_bc = get_line_sweepline(xzsony_ac, xzsony_bc, frustum_border)
     return line_ac | line_ab | line_bc | sweep_line_ab | sweep_line_bc
 
 
@@ -421,7 +407,7 @@ def render_textured_model(
         reverse=True,
     )
     # Longest line
-    line_ac = get_textured_line_bresenham(
+    line_ac = get_textured_line_bresenham_margin(
         vertex_texture_normal_a,
         vertex_texture_normal_c,
         vertex_texture_normal_b,
@@ -430,7 +416,7 @@ def render_textured_model(
         texture_size,
     )
     # Other lines
-    line_ab = get_textured_line_bresenham(
+    line_ab = get_textured_line_bresenham_margin(
         vertex_texture_normal_a,
         vertex_texture_normal_b,
         vertex_texture_normal_c,
@@ -438,7 +424,7 @@ def render_textured_model(
         texture_image,
         texture_size,
     )
-    line_bc = get_textured_line_bresenham(
+    line_bc = get_textured_line_bresenham_margin(
         vertex_texture_normal_b,
         vertex_texture_normal_c,
         vertex_texture_normal_a,
@@ -447,26 +433,26 @@ def render_textured_model(
         texture_size,
     )
     # Longest line xs on y
-    xsony_ac: dict[int, list[int]] = {}
-    for x, y in line_ac:
-        xsony_ac.setdefault(y, [])
-        xsony_ac[y].append(x)
+    xzsony_ac: dict[int, list[tuple[int, float]]] = {}
+    for (x, y), (z, *_) in line_ac.items():
+        xzsony_ac.setdefault(y, [])
+        xzsony_ac[y].append((x, z))
     # Other lines xs on y
-    xsony_ab: dict[int, list[int]] = {}
-    for x, y in line_ab:
-        xsony_ab.setdefault(y, [])
-        xsony_ab[y].append(x)
-    xsony_bc: dict[int, list[int]] = {}
-    for x, y in line_bc:
-        xsony_bc.setdefault(y, [])
-        xsony_bc[y].append(x)
+    xzsony_ab: dict[int, list[tuple[int, float]]] = {}
+    for (x, y), (z, *_) in line_ab.items():
+        xzsony_ab.setdefault(y, [])
+        xzsony_ab[y].append((x, z))
+    xzsony_bc: dict[int, list[tuple[int, float]]] = {}
+    for (x, y), (z, *_) in line_bc.items():
+        xzsony_bc.setdefault(y, [])
+        xzsony_bc[y].append((x, z))
     # Sweep line algorithm
     sweep_line_ab = get_textured_line_sweepline(
         vertex_texture_normal_a,
         vertex_texture_normal_b,
         vertex_texture_normal_c,
-        xsony_ac,
-        xsony_ab,
+        xzsony_ac,
+        xzsony_ab,
         frustum_border,
         texture_image,
         texture_size,
@@ -475,8 +461,8 @@ def render_textured_model(
         vertex_texture_normal_a,
         vertex_texture_normal_b,
         vertex_texture_normal_c,
-        xsony_ac,
-        xsony_bc,
+        xzsony_ac,
+        xzsony_bc,
         frustum_border,
         texture_image,
         texture_size,
@@ -756,7 +742,7 @@ class Camera(object):
             warnings.warn(
                 "no support for third-party keyboard library. "
                 "If it's on Linux, install it via `pip install keyboard`. "
-                "Then running the `main.py` as root. "
+                "Then run the `main.py` as root. "
             )
             warnings.warn("Using custom KeyboardListener for camera controlling.")
         try:
@@ -768,7 +754,7 @@ class Camera(object):
             warnings.warn(
                 "no support for third-party mouse library. "
                 "If it's on Linux, install it via `pip install mouse`. "
-                "Then running the `main.py` as root. "
+                "Then run the `main.py` as root. "
             )
             warnings.warn("Using custom KeyboardListener for camera controlling.")
         # keyboard = mouse = None
@@ -1234,10 +1220,12 @@ class Camera(object):
                 if character != " ":
                     pixel = (255, 255, 255, 255, ord(character))
                 else:
-                    pixel = self._pixels.get(
+                    # Ignore the Z-depth value
+                    _, *pixel = self._pixels.get(
                         ((x - self._half_width) // 2, y - self._half_height),
-                        (255, 255, 255, 255, 32),
+                        (0, 255, 255, 255, 255, 32),
                     )
+                    pixel = tuple(pixel)
                 row.append(pixel)
             frame.append(row)
         frame.reverse()

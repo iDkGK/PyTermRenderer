@@ -14,12 +14,11 @@ ImagesType = Iterable[ImageType]
 # Camera
 Point3DType = tuple[float, float, float]
 RotationType = tuple[float, float]
-Vertex2DType = tuple[float, float]
 FrustumBorderType = tuple[  # left right top bottom near far
     float, float, float, float, float, float
 ]
 ScreenPoint2DType = tuple[int, int]  # X Y on camera screen
-ScreenPixelDataType = tuple[int, int, int, int, int]  # R G B A C
+ScreenPixelDataType = tuple[float, int, int, int, int, int]  # Z-Depth R G B A C
 # Object
 Vertex3DType = tuple[float, float, float]
 TriangleVerticesType = tuple[Vertex3DType, Vertex3DType, Vertex3DType]
