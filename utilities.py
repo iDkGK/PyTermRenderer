@@ -26,7 +26,7 @@ from hintings import (
 
 
 # Render helper functions
-def get_line_bresenham(
+def get_untextured_line_bresenham(
     vertex1: Vertex3DType,
     vertex2: Vertex3DType,
     frustum_border: FrustumBorderType,
@@ -63,7 +63,7 @@ def get_line_bresenham(
     return line
 
 
-def get_line_sweepline(
+def get_untextured_line_sweepline(
     xzsony_long: dict[int, list[tuple[int, float]]],
     xzsony_short: dict[int, list[tuple[int, float]]],
     frustum_border: FrustumBorderType,
@@ -72,24 +72,24 @@ def get_line_sweepline(
     for y_shared, xzs_short in xzsony_short.items():
         if y_shared not in xzsony_long:
             continue
-        xs_long_sorted = sorted(xzsony_long[y_shared], key=lambda xzs: xzs[0])
+        xzs_long_sorted = sorted(xzsony_long[y_shared], key=lambda xzs: xzs[0])
         (x_long_min, z_long_min), (x_long_max, z_long_max) = (
-            xs_long_sorted[0],
-            xs_long_sorted[-1],
+            xzs_long_sorted[0],
+            xzs_long_sorted[-1],
         )
-        xs_short_sorted = sorted(xzs_short, key=lambda xzs: xzs[0])
+        xzs_short_sorted = sorted(xzs_short, key=lambda xzs: xzs[0])
         (x_short_min, z_short_min), (x_short_max, z_short_max) = (
-            xs_short_sorted[0],
-            xs_short_sorted[-1],
+            xzs_short_sorted[0],
+            xzs_short_sorted[-1],
         )
         if abs(x_long_min - x_short_max) < abs(x_long_max - x_short_min):
-            sweep_line |= get_line_bresenham(
+            sweep_line |= get_untextured_line_bresenham(
                 (x_long_min, y_shared, z_long_min),
                 (x_short_max, y_shared, z_short_max),
                 frustum_border,
             )
         else:
-            sweep_line |= get_line_bresenham(
+            sweep_line |= get_untextured_line_bresenham(
                 (x_long_max, y_shared, z_long_max),
                 (x_short_min, y_shared, z_short_min),
                 frustum_border,
@@ -249,15 +249,15 @@ def get_textured_line_sweepline(
     for y_shared, xzs_short in xzsony_short.items():
         if y_shared not in xzsony_long:
             continue
-        xs_long_sorted = sorted(xzsony_long[y_shared], key=lambda xzs: xzs[0])
+        xzs_long_sorted = sorted(xzsony_long[y_shared], key=lambda xzs: xzs[0])
         (x_long_min, z_long_min), (x_long_max, z_long_max) = (
-            xs_long_sorted[0],
-            xs_long_sorted[-1],
+            xzs_long_sorted[0],
+            xzs_long_sorted[-1],
         )
-        xs_short_sorted = sorted(xzs_short, key=lambda xzs: xzs[0])
+        xzs_short_sorted = sorted(xzs_short, key=lambda xzs: xzs[0])
         (x_short_min, z_short_min), (x_short_max, z_short_max) = (
-            xs_short_sorted[0],
-            xs_short_sorted[-1],
+            xzs_short_sorted[0],
+            xzs_short_sorted[-1],
         )
         if abs(x_long_min - x_short_max) < abs(x_long_max - x_short_min):
             sweep_line |= get_textured_line_bresenham_padding(
@@ -300,9 +300,9 @@ def render_mesh_line_no_culling(
     vertex_b = (x_b, y_b, z_b)
     vertex_c = (x_c, y_c, z_c)
     return (
-        get_line_bresenham(vertex_a, vertex_b, frustum_border)
-        | get_line_bresenham(vertex_b, vertex_c, frustum_border)
-        | get_line_bresenham(vertex_c, vertex_a, frustum_border)
+        get_untextured_line_bresenham(vertex_a, vertex_b, frustum_border)
+        | get_untextured_line_bresenham(vertex_b, vertex_c, frustum_border)
+        | get_untextured_line_bresenham(vertex_c, vertex_a, frustum_border)
     )
 
 
@@ -325,9 +325,9 @@ def render_mesh_line_backface_culling(
     if v_ab_y * v_bc_x - v_ab_x * v_bc_y < 0:
         return {}
     return (
-        get_line_bresenham(vertex_a, vertex_b, frustum_border)
-        | get_line_bresenham(vertex_b, vertex_c, frustum_border)
-        | get_line_bresenham(vertex_c, vertex_a, frustum_border)
+        get_untextured_line_bresenham(vertex_a, vertex_b, frustum_border)
+        | get_untextured_line_bresenham(vertex_b, vertex_c, frustum_border)
+        | get_untextured_line_bresenham(vertex_c, vertex_a, frustum_border)
     )
 
 
@@ -359,16 +359,16 @@ def render_untextured_model(
     vertex_b = (x_b, y_b, z_b)
     vertex_c = (x_c, y_c, z_c)
     # Longest line
-    line_ac = get_line_bresenham(vertex_a, vertex_c, frustum_border)
+    line_ac = get_untextured_line_bresenham(vertex_a, vertex_c, frustum_border)
     # Other lines
-    line_ab = get_line_bresenham(vertex_a, vertex_b, frustum_border)
-    line_bc = get_line_bresenham(vertex_b, vertex_c, frustum_border)
-    # Longest line xs on y
+    line_ab = get_untextured_line_bresenham(vertex_a, vertex_b, frustum_border)
+    line_bc = get_untextured_line_bresenham(vertex_b, vertex_c, frustum_border)
+    # Longest line xs and zs on y
     xzsony_ac: dict[int, list[tuple[int, float]]] = {}
     for (x, y), (z, *_) in line_ac.items():
         xzsony_ac.setdefault(y, [])
         xzsony_ac[y].append((x, z))
-    # Other lines xs on y
+    # Other lines xs and zs on y
     xzsony_ab: dict[int, list[tuple[int, float]]] = {}
     for (x, y), (z, *_) in line_ab.items():
         xzsony_ab.setdefault(y, [])
@@ -378,8 +378,8 @@ def render_untextured_model(
         xzsony_bc.setdefault(y, [])
         xzsony_bc[y].append((x, z))
     # Sweep line algorithm
-    sweep_line_ab = get_line_sweepline(xzsony_ac, xzsony_ab, frustum_border)
-    sweep_line_bc = get_line_sweepline(xzsony_ac, xzsony_bc, frustum_border)
+    sweep_line_ab = get_untextured_line_sweepline(xzsony_ac, xzsony_ab, frustum_border)
+    sweep_line_bc = get_untextured_line_sweepline(xzsony_ac, xzsony_bc, frustum_border)
     return line_ac | line_ab | line_bc | sweep_line_ab | sweep_line_bc
 
 
@@ -432,12 +432,12 @@ def render_textured_model(
         texture_image,
         texture_size,
     )
-    # Longest line xs on y
+    # Longest line xs and zs on y
     xzsony_ac: dict[int, list[tuple[int, float]]] = {}
     for (x, y), (z, *_) in line_ac.items():
         xzsony_ac.setdefault(y, [])
         xzsony_ac[y].append((x, z))
-    # Other lines xs on y
+    # Other lines xs and zs on y
     xzsony_ab: dict[int, list[tuple[int, float]]] = {}
     for (x, y), (z, *_) in line_ab.items():
         xzsony_ab.setdefault(y, [])
