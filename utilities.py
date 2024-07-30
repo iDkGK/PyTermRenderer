@@ -649,55 +649,7 @@ class Object(object):
 
     # Update methods
     def update(self, delta_time: float = 0.0) -> None:
-        triangles: set[
-            tuple[
-                TriangleVerticesType,
-                TriangleTexturesType,
-                TriangleNormalsType,
-            ]
-        ] = set()
-        time_factor = time.perf_counter_ns() / 1e9 * 360
-        round_per_second = 0.75
-        sin_θ = math.sin(math.radians(time_factor * round_per_second))
-        cos_θ = math.cos(math.radians(time_factor * round_per_second))
-        stroke_offset = math.sin(math.radians(time_factor)) * 2.0
-        for vertices, textures, normals in self._original_triangles:
-            # Unpacking
-            (
-                (vertex_a_x, vertex_a_y, vertex_a_z),
-                (vertex_b_x, vertex_b_y, vertex_b_z),
-                (vertex_c_x, vertex_c_y, vertex_c_z),
-            ) = vertices
-            # Rotation & position
-            (
-                (vertex_a_x, vertex_a_y, vertex_a_z),
-                (vertex_b_x, vertex_b_y, vertex_b_z),
-                (vertex_c_x, vertex_c_y, vertex_c_z),
-            ) = (
-                (
-                    vertex_a_x * cos_θ - vertex_a_z * sin_θ,
-                    vertex_a_y + stroke_offset,
-                    vertex_a_x * sin_θ + vertex_a_z * cos_θ,
-                ),
-                (
-                    vertex_b_x * cos_θ - vertex_b_z * sin_θ,
-                    vertex_b_y + stroke_offset,
-                    vertex_b_x * sin_θ + vertex_b_z * cos_θ,
-                ),
-                (
-                    vertex_c_x * cos_θ - vertex_c_z * sin_θ,
-                    vertex_c_y + stroke_offset,
-                    vertex_c_x * sin_θ + vertex_c_z * cos_θ,
-                ),
-            )
-            # Repacking
-            vertices = (
-                (vertex_a_x, vertex_a_y, vertex_a_z),
-                (vertex_b_x, vertex_b_y, vertex_b_z),
-                (vertex_c_x, vertex_c_y, vertex_c_z),
-            )
-            triangles.add((vertices, textures, normals))
-        self._triangles = triangles
+        return
 
     # Camera-related methods
     def show_to(self, camera: "Camera") -> None:

@@ -229,9 +229,15 @@ class Fake3DSceneGame(Backend):
     @property
     def frames(self) -> FramesType:
         # Create objects
-        target_object = Object(
-            "resource/models/crafting_table.obj",
-            coordinate=(0.0, 0.0, 0.0),
+        object_count = 4
+        target_objects: list[Object] = list(
+            map(
+                lambda object_index: Object(
+                    "resource/models/crafting_table.obj",
+                    coordinate=(object_index * 8 - object_count * 4, 0.0, 0.0),
+                ),
+                range(0, object_count),
+            )
         )
         smooth_camera = SmoothCamera(
             screen_size=os.get_terminal_size(),
@@ -243,14 +249,16 @@ class Fake3DSceneGame(Backend):
             # coordinate=(0.0, 0.0, 0.0),
             # rotation=(0.0, 0.0),
         )
-        smooth_camera.show_object(target_object)
+        for target_object in target_objects:
+            smooth_camera.show_object(target_object)
         perf_counter = time.perf_counter_ns()
         while True:
 
             # Object update
             delta_time = (time.perf_counter_ns() - perf_counter) / 1e9
             perf_counter = time.perf_counter_ns()
-            target_object.update(delta_time)
+            for target_object in target_objects:
+                target_object.update(delta_time)
             smooth_camera.update(delta_time)
 
             # Frame generation
