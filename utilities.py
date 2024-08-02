@@ -513,7 +513,7 @@ class Object(object):
         self._filepath = filepath
         self._x, self._y, self._z = coordinate
         self._name = ""
-        self._triangles: set[
+        self._original_triangles: set[
             tuple[
                 TriangleVerticesType,
                 TriangleTexturesType,
@@ -594,16 +594,7 @@ class Object(object):
             normal_a_x, normal_a_y, normal_a_z = normals[face_normal_a_index]
             normal_b_x, normal_b_y, normal_b_z = normals[face_normal_b_index]
             normal_c_x, normal_c_y, normal_c_z = normals[face_normal_c_index]
-            vertex_a_x += self._x
-            vertex_a_y += self._y
-            vertex_a_z += self._z
-            vertex_b_x += self._x
-            vertex_b_y += self._y
-            vertex_b_z += self._z
-            vertex_c_x += self._x
-            vertex_c_y += self._y
-            vertex_c_z += self._z
-            self._triangles.add(
+            self._original_triangles.add(
                 (
                     (
                         (vertex_a_x, vertex_a_y, vertex_a_z),
@@ -622,7 +613,6 @@ class Object(object):
                     ),
                 )
             )
-        self._original_triangles = self._triangles.copy()
 
     # Properties
     @property
@@ -649,7 +639,44 @@ class Object(object):
 
     # Update methods
     def update(self, delta_time: float = 0.0) -> None:
-        return
+        self._triangles: set[
+            tuple[
+                TriangleVerticesType,
+                TriangleTexturesType,
+                TriangleNormalsType,
+            ]
+        ] = set()
+        time_factor = time.perf_counter_ns() / 1e9 * 360
+        round_per_second = 0.75
+        sin_θ = math.sin(math.radians(time_factor * round_per_second))
+        cos_θ = math.cos(math.radians(time_factor * round_per_second))
+        stroke_offset = math.sin(math.radians(time_factor)) * 2.0
+        for vertices, textures, normals in self._original_triangles:
+            # Unpacking
+            (
+                (vertex_a_x, vertex_a_y, vertex_a_z),
+                (vertex_b_x, vertex_b_y, vertex_b_z),
+                (vertex_c_x, vertex_c_y, vertex_c_z),
+            ) = vertices
+            # Repacking
+            vertices = (
+                (
+                    vertex_a_x * cos_θ - vertex_a_z * sin_θ + self._x,
+                    vertex_a_y + self._y + stroke_offset,
+                    vertex_a_x * sin_θ + vertex_a_z * cos_θ + self._z,
+                ),
+                (
+                    vertex_b_x * cos_θ - vertex_b_z * sin_θ + self._x,
+                    vertex_b_y + self._y + stroke_offset,
+                    vertex_b_x * sin_θ + vertex_b_z * cos_θ + self._z,
+                ),
+                (
+                    vertex_c_x * cos_θ - vertex_c_z * sin_θ + self._x,
+                    vertex_c_y + self._y + stroke_offset,
+                    vertex_c_x * sin_θ + vertex_c_z * cos_θ + self._z,
+                ),
+            )
+            self._triangles.add((vertices, textures, normals))
 
     # Camera-related methods
     def show_to(self, camera: "Camera") -> None:
