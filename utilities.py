@@ -116,7 +116,7 @@ def get_textured_line_bresenham_margin(
     vertex_texture_normal_c: Vertex3DTexture3DNormal3DType,
     frustum_border: FrustumBorderType,
     texture_image: ImageType,
-    texture_size: tuple[float, float],
+    texture_size: tuple[int, int],
     pixel_buffer: dict[ScreenPoint2DType, ScreenPixelDataType],
 ) -> dict[ScreenPoint2DType, ScreenPixelDataType]:
     # Bresenham line algorithm
@@ -144,27 +144,27 @@ def get_textured_line_bresenham_margin(
         0.0 if steps == 0.0 else (delta_z / steps if z_a < z_b else -delta_z / steps)
     )
     error = delta_x - delta_y
+    denominator = (y_b - y_c) * (x_a - x_c) + (x_c - x_b) * (y_a - y_c)
+    reciprocal_denominator = 1 / denominator if denominator != 0.0 else math.inf
     while True:
         interpolation = (x, y)
         if left < x < right and bottom < y < top and near < z < far:
-            denominator = (y_b - y_c) * (x_a - x_c) + (x_c - x_b) * (y_a - y_c)
-            if denominator == 0.0:
-                alpha = 0.0
-                beta = 0.0
-                gamma = 1.0
-            else:
-                alpha = ((y_b - y_c) * (x - x_c) + (x_c - x_b) * (y - y_c)) / (
-                    denominator
-                )
-                beta = ((y_c - y_a) * (x - x_c) + (x_a - x_c) * (y - y_c)) / (
-                    denominator
-                )
+            alpha, beta, gamma, u, v, w = 0.5, 0.5, 0.0, 1.0, 0.0, 0.0
+            if denominator != 0.0:
+                alpha = (
+                    (y_b - y_c) * (x - x_c) + (x_c - x_b) * (y - y_c)
+                ) * reciprocal_denominator
+                beta = (
+                    (y_c - y_a) * (x - x_c) + (x_a - x_c) * (y - y_c)
+                ) * reciprocal_denominator
                 gamma = 1 - alpha - beta
-            w = alpha * w_a + beta * w_b + gamma * w_c
-            u = (alpha * u_a * w_a + beta * u_b * w_b + gamma * u_c * w_c) / w
-            v = 1 - (alpha * v_a * w_a + beta * v_b * w_b + gamma * v_c * w_c) / w
-            texture_x = min(max(0, int(u * texture_width)), int(texture_width))
-            texture_y = min(max(0, int(v * texture_height)), int(texture_height))
+                w = alpha * w_a + beta * w_b + gamma * w_c
+                u, v = (
+                    (alpha * u_a * w_a + beta * u_b * w_b + gamma * u_c * w_c) / w,
+                    1 - (alpha * v_a * w_a + beta * v_b * w_b + gamma * v_c * w_c) / w,
+                )
+            texture_x = min(max(0, round(u * texture_width)), texture_width)
+            texture_y = min(max(0, round(v * texture_height)), texture_height)
             z_buffered, *_ = pixel_buffer.get(interpolation, DEFAULT_PIXEL_DATA)
             r, g, b, a = texture_image[texture_y][texture_x]
             pixel_data = (z, r, g, b, a, FILLED_PIXEL)
@@ -193,7 +193,7 @@ def get_textured_line_bresenham_padding(
     vertex2: Vertex3DType,
     frustum_border: FrustumBorderType,
     texture_image: ImageType,
-    texture_size: tuple[float, float],
+    texture_size: tuple[int, int],
     pixel_buffer: dict[ScreenPoint2DType, ScreenPixelDataType],
 ) -> None:
     # Bresenham line algorithm
@@ -219,27 +219,27 @@ def get_textured_line_bresenham_padding(
     step_y = 1 if y1 < y2 else -1
     step_z = 0.0 if steps == 0.0 else (delta_z / steps if z1 < z2 else -delta_z / steps)
     error = delta_x - delta_y
+    denominator = (y_b - y_c) * (x_a - x_c) + (x_c - x_b) * (y_a - y_c)
+    reciprocal_denominator = 1 / denominator if denominator != 0.0 else math.inf
     while True:
         interpolation = (x, y)
         if left < x < right and bottom < y < top and near < z < far:
-            denominator = (y_b - y_c) * (x_a - x_c) + (x_c - x_b) * (y_a - y_c)
-            if denominator == 0.0:
-                alpha = 0.0
-                beta = 0.0
-                gamma = 1.0
-            else:
-                alpha = ((y_b - y_c) * (x - x_c) + (x_c - x_b) * (y - y_c)) / (
-                    denominator
-                )
-                beta = ((y_c - y_a) * (x - x_c) + (x_a - x_c) * (y - y_c)) / (
-                    denominator
-                )
+            alpha, beta, gamma, u, v, w = 0.5, 0.5, 0.0, 1.0, 0.0, 0.0
+            if denominator != 0.0:
+                alpha = (
+                    (y_b - y_c) * (x - x_c) + (x_c - x_b) * (y - y_c)
+                ) * reciprocal_denominator
+                beta = (
+                    (y_c - y_a) * (x - x_c) + (x_a - x_c) * (y - y_c)
+                ) * reciprocal_denominator
                 gamma = 1 - alpha - beta
-            w = alpha * w_a + beta * w_b + gamma * w_c
-            u = (alpha * u_a * w_a + beta * u_b * w_b + gamma * u_c * w_c) / w
-            v = 1 - (alpha * v_a * w_a + beta * v_b * w_b + gamma * v_c * w_c) / w
-            texture_x = min(max(0, int(u * texture_width)), int(texture_width))
-            texture_y = min(max(0, int(v * texture_height)), int(texture_height))
+                w = alpha * w_a + beta * w_b + gamma * w_c
+                u, v = (
+                    (alpha * u_a * w_a + beta * u_b * w_b + gamma * u_c * w_c) / w,
+                    1 - (alpha * v_a * w_a + beta * v_b * w_b + gamma * v_c * w_c) / w,
+                )
+            texture_x = min(max(0, round(u * texture_width)), texture_width)
+            texture_y = min(max(0, round(v * texture_height)), texture_height)
             z_buffered, *_ = pixel_buffer.get(interpolation, DEFAULT_PIXEL_DATA)
             r, g, b, a = texture_image[texture_y][texture_x]
             pixel_data = (z, r, g, b, a, FILLED_PIXEL)
@@ -267,7 +267,7 @@ def get_textured_line_sweepline(
     xzsony_short: dict[int, list[tuple[int, float]]],
     frustum_border: FrustumBorderType,
     texture_image: ImageType,
-    texture_size: tuple[float, float],
+    texture_size: tuple[int, int],
     pixel_buffer: dict[ScreenPoint2DType, ScreenPixelDataType],
 ) -> None:
     for y_shared, xzs_short in xzsony_short.items():
@@ -316,7 +316,7 @@ def render_mesh_line_no_culling(
     vertex_texture_normal_c: Vertex3DTexture3DNormal3DType,
     frustum_border: FrustumBorderType,
     texture_image: ImageType | None,
-    texture_size: tuple[float, float] | None,
+    texture_size: tuple[int, int] | None,
     pixel_buffer: dict[ScreenPoint2DType, ScreenPixelDataType],
 ) -> None:
     x_a, y_a, z_a, *_ = vertex_texture_normal_a
@@ -336,7 +336,7 @@ def render_mesh_line_backface_culling(
     vertex_texture_normal_c: Vertex3DTexture3DNormal3DType,
     frustum_border: FrustumBorderType,
     texture_image: ImageType | None,
-    texture_size: tuple[float, float] | None,
+    texture_size: tuple[int, int] | None,
     pixel_buffer: dict[ScreenPoint2DType, ScreenPixelDataType],
 ) -> None:
     x_a, y_a, z_a, *_ = vertex_texture_normal_a
@@ -347,6 +347,7 @@ def render_mesh_line_backface_culling(
     vertex_a = (x_a, y_a, z_a)
     vertex_b = (x_b, y_b, z_b)
     vertex_c = (x_c, y_c, z_c)
+    # Back-face culling
     if v_ab_y * v_bc_x - v_ab_x * v_bc_y < 0:
         return
     get_untextured_line_bresenham(vertex_a, vertex_b, frustum_border, pixel_buffer)
@@ -360,7 +361,7 @@ def render_untextured_model(
     vertex_texture_normal_c: Vertex3DTexture3DNormal3DType,
     frustum_border: FrustumBorderType,
     texture_image: ImageType | None,
-    texture_size: tuple[float, float] | None,
+    texture_size: tuple[int, int] | None,
     pixel_buffer: dict[ScreenPoint2DType, ScreenPixelDataType],
 ) -> None:
     x_a, y_a, z_a, *_ = vertex_texture_normal_a
@@ -368,6 +369,7 @@ def render_untextured_model(
     x_c, y_c, z_c, *_ = vertex_texture_normal_c
     v_ab_x, v_ab_y = x_b - x_a, y_b - y_a
     v_bc_x, v_bc_y = x_c - x_b, y_c - y_b
+    # Back-face culling
     if v_ab_y * v_bc_x - v_ab_x * v_bc_y < 0:
         return
     # Sort by y coordinate
@@ -418,16 +420,26 @@ def render_textured_model(
     vertex_texture_normal_c: Vertex3DTexture3DNormal3DType,
     frustum_border: FrustumBorderType,
     texture_image: ImageType | None,
-    texture_size: tuple[float, float] | None,
+    texture_size: tuple[int, int] | None,
     pixel_buffer: dict[ScreenPoint2DType, ScreenPixelDataType],
 ) -> None:
     if texture_image is None or texture_size is None:
+        render_untextured_model(
+            vertex_texture_normal_a,
+            vertex_texture_normal_b,
+            vertex_texture_normal_c,
+            frustum_border,
+            texture_image,
+            texture_size,
+            pixel_buffer,
+        )
         return
     x_a, y_a, *_ = vertex_texture_normal_a
     x_b, y_b, *_ = vertex_texture_normal_b
     x_c, y_c, *_ = vertex_texture_normal_c
     v_ab_x, v_ab_y = x_b - x_a, y_b - y_a
     v_bc_x, v_bc_y = x_c - x_b, y_c - y_b
+    # Back-face culling
     if v_ab_y * v_bc_x - v_ab_x * v_bc_y < 0:
         return
     # Sort by y coordinate
@@ -1080,7 +1092,7 @@ class Camera(object):
             else:
                 texture_image = obj.texture.image_data
                 texture_width, texture_height = obj.texture.image_size
-                texture_size = (texture_width - 1e-8, texture_height - 1e-8)
+                texture_size = (texture_width - 1, texture_height - 1)
             for vertices, textures, normals in obj.triangles:
                 (
                     (vertex_a_x, vertex_a_y, vertex_a_z),
