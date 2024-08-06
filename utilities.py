@@ -532,6 +532,13 @@ class Object(object):
                 TriangleNormalsType,
             ]
         ] = set()
+        self._triangles: set[
+            tuple[
+                TriangleVerticesType,
+                TriangleTexturesType,
+                TriangleNormalsType,
+            ]
+        ] = set()
         self._texture: PNG | None = None
         # Parse file data and retrieve triangles vertices
         vertices: list[Vertex3DType] = []
@@ -625,11 +632,54 @@ class Object(object):
                     ),
                 )
             )
+            self._triangles.add(
+                (
+                    (
+                        (
+                            vertex_a_x + self._x,
+                            vertex_a_y + self._y,
+                            vertex_a_z + self._z,
+                        ),
+                        (
+                            vertex_b_x + self._x,
+                            vertex_b_y + self._y,
+                            vertex_b_z + self._z,
+                        ),
+                        (
+                            vertex_c_x + self._x,
+                            vertex_c_y + self._y,
+                            vertex_c_z + self._z,
+                        ),
+                    ),
+                    (
+                        (texture_a_u, texture_a_v, texture_a_w),
+                        (texture_b_u, texture_b_v, texture_b_w),
+                        (texture_c_u, texture_c_v, texture_c_w),
+                    ),
+                    (
+                        (normal_a_x, normal_a_y, normal_a_z),
+                        (normal_b_x, normal_b_y, normal_b_z),
+                        (normal_c_x, normal_c_y, normal_c_z),
+                    ),
+                )
+            )
 
     # Properties
     @property
     def filepath(self) -> str:
         return self._filepath
+
+    @property
+    def x(self) -> float:
+        return self._x
+
+    @property
+    def y(self) -> float:
+        return self._y
+
+    @property
+    def z(self) -> float:
+        return self._z
 
     @property
     def name(self) -> str:
@@ -1085,7 +1135,13 @@ class Camera(object):
     def _update_objects(self, delta_time: float) -> None:
         # Iteration over all triangles. Assuming that every triangle is ▲abc
         self._pixels: dict[ScreenPoint2DType, ScreenPixelDataType] = {}
-        for obj in self._objects:
+        for obj in sorted(
+            self._objects,
+            key=lambda obj: (
+                (self._x - obj.x) ** 2 + (self._y - obj.y) ** 2 + (self._y - obj.y) ** 2
+            )
+            ** 0.5,
+        ):
             if obj.texture is None:
                 texture_image = None
                 texture_size = None
