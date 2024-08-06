@@ -229,14 +229,23 @@ class Fake3DSceneGame(Backend):
     @property
     def frames(self) -> FramesType:
         # Create objects
-        object_count = 4
-        target_objects: list[Object] = list(
-            map(
-                lambda object_index: Object(
-                    "resource/models/crafting_table.obj",
-                    coordinate=(object_index * 8 - object_count * 4, 0.0, 0.0),
-                ),
-                range(0, object_count),
+        target_objects: list[Object] = []
+        target_objects.append(
+            Object(
+                "resource/models/crafting_table.obj",
+                coordinate=(-16, 0.0, 0.0),
+            )
+        )
+        target_objects.append(
+            Object(
+                "resource/models/fox.obj",
+                coordinate=(0.0, 0.0, 0.0),
+            )
+        )
+        target_objects.append(
+            Object(
+                "resource/models/crafting_table.obj",
+                coordinate=(16, 0.0, 0.0),
             )
         )
         smooth_camera = SmoothCamera(
