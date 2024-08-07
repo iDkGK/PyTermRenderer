@@ -776,7 +776,7 @@ class Camera(object):
             raise CameraScreenTooSmallError(
                 "camera screen is too small to render objects."
             )
-        self._field_of_view = field_of_view
+        self._field_of_view = min(max(60.0, field_of_view), 120.0)
         self._focal = (
             max(self._screen_width, self._screen_height)
             / math.tan(math.radians(field_of_view / 2.0))
