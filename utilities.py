@@ -950,11 +950,14 @@ class Camera(object):
                         mouse.move(self._screen_width, self._screen_height)  # type: ignore
                     else:
                         break
-                if type(event) == MoveEvent:
-                    self._rotate(
+                event_type = type(event)
+                if event_type == MoveEvent:
+                    self._rotate_view(
                         yaw=-(event.y - self._screen_height) / 72,  # type: ignore
                         pitch=+(event.x - self._screen_width) / 72,  # type: ignore
                     )
+                elif event_type == WheelEvent:
+                    self._change_fov(delta_fov=event.delta)  # type: ignore
                 rotate_lock.release()
 
             # Rotation
@@ -999,6 +1002,9 @@ class Camera(object):
             keyboard_listener.register("2", self._yaw_reverse)
             keyboard_listener.register("6", self._pitch_forward)
             keyboard_listener.register("4", self._pitch_reverse)
+            # View
+            keyboard_listener.register("+", self._fov_increase)
+            keyboard_listener.register("-", self._fov_decrease)
 
     # Reset methods
     def _reset(self) -> None:
@@ -1067,7 +1073,7 @@ class Camera(object):
         self._pitch -= 1.0
         self._pitch %= 360.0
 
-    def _rotate(
+    def _rotate_view(
         self,
         *,
         yaw: float = 0.0,
@@ -1077,6 +1083,34 @@ class Camera(object):
         self._pitch += pitch
         self._yaw = max(min(self._yaw, 90.0), -90.0)
         self._pitch %= 360.0
+
+    # View methods
+    def _fov_increase(self) -> None:
+        self._field_of_view += 1.0
+        self._field_of_view = min(max(60.0, self._field_of_view), 120.0)
+        self._focal = (
+            max(self._screen_width, self._screen_height)
+            / math.tan(math.radians(self._field_of_view / 2.0))
+            / 2
+        )
+
+    def _fov_decrease(self) -> None:
+        self._field_of_view -= 1.0
+        self._field_of_view = min(max(60.0, self._field_of_view), 120.0)
+        self._focal = (
+            max(self._screen_width, self._screen_height)
+            / math.tan(math.radians(self._field_of_view / 2.0))
+            / 2
+        )
+
+    def _change_fov(self, *, delta_fov: float) -> None:
+        self._field_of_view += delta_fov
+        self._field_of_view = min(max(60.0, self._field_of_view), 120.0)
+        self._focal = (
+            max(self._screen_width, self._screen_height)
+            / math.tan(math.radians(self._field_of_view / 2.0))
+            / 2
+        )
 
     # Update methods
     def _update_position(self, delta_time: float) -> None:
