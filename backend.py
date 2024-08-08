@@ -6,7 +6,7 @@ from datetime import datetime
 
 from decoder import PNGSequence
 from hintings import EffectModeType, FramesType, FrameType, RowType
-from utilities import Camera, Object, SmoothCamera  # type: ignore
+from utilities import Camera, Object, RotatingObject, SmoothCamera  # type: ignore
 
 ASCII_CHARACTERS = "".join((string.digits, string.ascii_letters, string.punctuation))
 BINARY_CHARACTERS = "01" * 32
@@ -232,20 +232,20 @@ class Fake3DSceneGame(Backend):
         target_objects: list[Object] = []
         target_objects.append(
             Object(
-                "resource/models/crafting_table.obj",
-                coordinate=(-16, 0.0, 0.0),
-            )
-        )
-        target_objects.append(
-            Object(
                 "resource/models/fox.obj",
                 coordinate=(0.0, 0.0, 0.0),
             )
         )
         target_objects.append(
-            Object(
+            RotatingObject(
                 "resource/models/crafting_table.obj",
-                coordinate=(16, 0.0, 0.0),
+                coordinate=(-8.0, 0.0, 0.0),
+            )
+        )
+        target_objects.append(
+            RotatingObject(
+                "resource/models/crafting_table.obj",
+                coordinate=(8.0, 0.0, 0.0),
             )
         )
         smooth_camera = SmoothCamera(
@@ -253,10 +253,10 @@ class Fake3DSceneGame(Backend):
             field_of_view=90,
             near_plane=0.0,
             far_plane=125.0,
-            coordinate=(-12.24744871391589, 10.0, -12.24744871391589),
-            rotation=(-30.0, 45.0),
-            # coordinate=(0.0, 0.0, 0.0),
-            # rotation=(0.0, 0.0),
+            # coordinate=(-12.24744871391589, 10.0, -12.24744871391589),
+            # rotation=(-30.0, 45.0),
+            coordinate=(0.0, 0.0, -25.0),
+            rotation=(0.0, 0.0),
         )
         for target_object in target_objects:
             smooth_camera.show_object(target_object)

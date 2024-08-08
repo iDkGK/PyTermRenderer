@@ -701,6 +701,21 @@ class Object(object):
 
     # Update methods
     def update(self, delta_time: float = 0.0) -> None:
+        pass
+
+    # Camera-related methods
+    def show_to(self, camera: "Camera") -> None:
+        camera.show_object(self)
+
+    def hide_from(self, camera: "Camera") -> None:
+        camera.hide_object(self)
+
+
+class RotatingObject(Object):
+    def __init__(self, filepath: str, coordinate: Point3DType) -> None:
+        super().__init__(filepath, coordinate)
+
+    def update(self, delta_time: float = 0.0) -> None:
         self._triangles: set[
             tuple[
                 TriangleVerticesType,
@@ -739,13 +754,6 @@ class Object(object):
                 ),
             )
             self._triangles.add((vertices, textures, normals))
-
-    # Camera-related methods
-    def show_to(self, camera: "Camera") -> None:
-        camera.show_object(self)
-
-    def hide_from(self, camera: "Camera") -> None:
-        camera.hide_object(self)
 
 
 class CameraScreenTooSmallError(Exception):
