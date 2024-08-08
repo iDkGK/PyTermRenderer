@@ -105,7 +105,9 @@ class WavePlayer(object):
                         )
                     )
                 list(map(lambda future: future.result(), futures))
-                time.sleep(wav_time - (time.perf_counter() - time_start))
+                remaining_time = wav_time - (time.perf_counter() - time_start)
+                if remaining_time > 0:
+                    time.sleep(remaining_time)
             finally:
                 for part_filepath, *_ in async_pool_arguments:
                     os.remove(part_filepath)
