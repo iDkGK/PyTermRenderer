@@ -3,12 +3,12 @@ import sys
 import time
 import tempfile
 import wave
-import winsound
 from concurrent.futures import Future, ProcessPoolExecutor
 from threading import Thread
 
 
 def windows_wrapper(filepath: str, data: bytes, delay: float) -> None:
+    import winsound
     from winsound import SND_MEMORY  # type: ignore
 
     time.sleep(delay)
@@ -111,6 +111,6 @@ class WavePlayer(object):
 
 
 if __name__ == "__main__":
-    wave_player = WavePlayer(max_workers=16)
+    wave_player = WavePlayer()
     target = wave_player.async_play("resource/audio/piano.wav")
     target = wave_player.play("resource/audio/piano.wav")
