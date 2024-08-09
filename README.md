@@ -7,7 +7,7 @@ PyTermRenderer, written in Python3, is a tool to display PNGs, or to render and 
 ## Modules & APIs
 
 - audio.py - providing APIs to play wav audio files
-  - `play_sound_async` - a function to play wav audio files
+  - `WavePlayer` - a class providing simple wave file play function across different platforms
 - backend.py - providing some implemented ascii effects APIs
   - `TheMatrixCodeRain` - a class providing ascii letters rain effect like the one in _The Matrix_
   - `DigitalTimeUnit` - a class providing digital clock effect
@@ -17,14 +17,15 @@ PyTermRenderer, written in Python3, is a tool to display PNGs, or to render and 
 - decoder.py - providing APIs to decode PNG images
   - `PNG` - a decoder class for retriving data from single PNG file
   - `PNGSequence` - a decoder class for retriving data from multiple PNG files, A.K.A PNG sequence
-- hintings.py - custom type bindings for IDE level type hinting
-- main.py - the entry point of this project
 - display.py - providing different kinds of displaying APIs
   - `display_frame` - a function to display a frame of RGBA colors and characters
   - `display_ascii` - a function to display a frame of RGBA colors with ASCII letters
   - `display_gray` - a function to display a frame of RGBA colors in grayscale mode
   - `display_rgba` - a function to display a frame with RGBA colored background
   - `clear_screen` - a function to clear terminal screen
+- exceptions.py - providing different kinds of Exception classes
+- hintings.py - custom type bindings for IDE level type hinting
+- main.py - the entry point of this project
 - utilities.py - providing some handy functions or classes
   - ...
 

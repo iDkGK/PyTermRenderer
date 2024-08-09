@@ -46,7 +46,7 @@ __ascii_buffer__ = None
 __gray_buffer__ = None
 __rgba_buffer__ = None
 __fps_counters__: deque[float] = deque(maxlen=30)
-__time_counter__ = time.perf_counter_ns()
+__time_counter__ = time.perf_counter()
 
 
 def __pring_average_fps__() -> None:
@@ -106,11 +106,11 @@ def display_frame(frame: FrameType, fps: int) -> None:
     time.sleep(
         max(
             0,
-            1 / (fps or math.inf) - (time.perf_counter_ns() - __time_counter__) / 1e9,
+            1 / (fps or math.inf) - (time.perf_counter() - __time_counter__),
         )
     )
-    __fps_counters__.append(1e9 / (time.perf_counter_ns() - __time_counter__))
-    __time_counter__ = time.perf_counter_ns()
+    __fps_counters__.append(1 / (time.perf_counter() - __time_counter__))
+    __time_counter__ = time.perf_counter()
     print(end="\x1b];%.1f fps\a" % __fps_counters__[-1], flush=True)
 
 
@@ -164,11 +164,11 @@ def display_ascii(frame: FrameType, fps: int) -> None:
     time.sleep(
         max(
             0,
-            1 / (fps or math.inf) - (time.perf_counter_ns() - __time_counter__) / 1e9,
+            1 / (fps or math.inf) - (time.perf_counter() - __time_counter__),
         )
     )
-    __fps_counters__.append(1e9 / (time.perf_counter_ns() - __time_counter__))
-    __time_counter__ = time.perf_counter_ns()
+    __fps_counters__.append(1 / (time.perf_counter() - __time_counter__))
+    __time_counter__ = time.perf_counter()
     print(end="\x1b];%.1f fps\a" % __fps_counters__[-1], flush=True)
 
 
@@ -216,11 +216,11 @@ def display_gray(frame: FrameType, fps: int) -> None:
     time.sleep(
         max(
             0,
-            1 / (fps or math.inf) - (time.perf_counter_ns() - __time_counter__) / 1e9,
+            1 / (fps or math.inf) - (time.perf_counter() - __time_counter__),
         )
     )
-    __fps_counters__.append(1e9 / (time.perf_counter_ns() - __time_counter__))
-    __time_counter__ = time.perf_counter_ns()
+    __fps_counters__.append(1 / (time.perf_counter() - __time_counter__))
+    __time_counter__ = time.perf_counter()
     print(end="\x1b];%.1f fps\a" % __fps_counters__[-1], flush=True)
 
 
@@ -259,11 +259,11 @@ def display_rgba(frame: FrameType, fps: int) -> None:
     time.sleep(
         max(
             0,
-            1 / (fps or math.inf) - (time.perf_counter_ns() - __time_counter__) / 1e9,
+            1 / (fps or math.inf) - (time.perf_counter() - __time_counter__),
         )
     )
-    __fps_counters__.append(1e9 / (time.perf_counter_ns() - __time_counter__))
-    __time_counter__ = time.perf_counter_ns()
+    __fps_counters__.append(1 / (time.perf_counter() - __time_counter__))
+    __time_counter__ = time.perf_counter()
     print(end="\x1b];%.1f fps\a" % __fps_counters__[-1], flush=True)
 
 

@@ -6,6 +6,8 @@ import wave
 from concurrent.futures import Future, ProcessPoolExecutor
 from threading import Thread
 
+from exceptions import UnsupportedPlatformError
+
 
 def windows_wrapper(filepath: str, data: bytes, delay: float) -> None:
     import winsound
@@ -32,10 +34,6 @@ elif sys.platform.startswith("linux"):
 elif sys.platform.startswith("darwin"):
     wrapper = macos_wrapper
 else:
-
-    class UnsupportedPlatformError(Exception):
-        pass
-
     raise UnsupportedPlatformError("current platform is not supported")
 
 
@@ -61,11 +59,12 @@ class WavePlayer(object):
             try:
                 for part_index in range(0, self._max_workers - 1):
                     part_filepath = tempfile.mktemp(suffix=".wav", prefix="tmp_PTR_")
-                    part_data = wav.readframes(per_part_frames)
-                    with wave.open(part_filepath, "wb") as part_tmpfile:
+                    with (
+                        wave.open(part_filepath, "wb") as part_tmpfile,
+                        open(part_filepath, "rb") as temp_file,
+                    ):
                         part_tmpfile.setparams(wav_params)
-                        part_tmpfile.writeframes(part_data)
-                    with open(part_filepath, "rb") as temp_file:
+                        part_tmpfile.writeframes(wav.readframes(per_part_frames))
                         async_pool_arguments.append(
                             (
                                 part_filepath,
@@ -75,11 +74,12 @@ class WavePlayer(object):
                         )
                 else:
                     part_filepath = tempfile.mktemp(suffix=".wav", prefix="tmp_PTR_")
-                    part_data = wav.readframes(last_part_frames)
-                    with wave.open(part_filepath, "wb") as part_tmpfile:
+                    with (
+                        wave.open(part_filepath, "wb") as part_tmpfile,
+                        open(part_filepath, "rb") as temp_file,
+                    ):
                         part_tmpfile.setparams(wav_params)
-                        part_tmpfile.writeframes(part_data)
-                    with open(part_filepath, "rb") as temp_file:
+                        part_tmpfile.writeframes(wav.readframes(last_part_frames))
                         async_pool_arguments.append(
                             (
                                 part_filepath,

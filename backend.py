@@ -5,6 +5,7 @@ import time
 from datetime import datetime
 
 from decoder import PNGSequence
+from exceptions import InvalidEffectModeError
 from hintings import EffectModeType, FramesType, FrameType, RowType
 from utilities import Camera, Object, RotatingObject, SmoothCamera  # type: ignore
 
@@ -20,10 +21,6 @@ BINARY_CHARACTERS_LENGTH = len(BINARY_CHARACTERS) - 1
 PIXEL_DENSITY_SHORT_CHARACTERS_LENGTH = len(PIXEL_DENSITY_SHORT_CHARACTERS) - 1
 PIXEL_DENSITY_STANDARD_CHARACTERS_LENGTH = len(PIXEL_DENSITY_STANDARD_CHARACTERS) - 1
 PIXEL_DENSITY_LONG_CHARACTERS_LENGTH = len(PIXEL_DENSITY_LONG_CHARACTERS) - 1
-
-
-class InvalidEffectModeError(Exception):
-    pass
 
 
 class Backend(object):
@@ -260,12 +257,12 @@ class Fake3DSceneGame(Backend):
         )
         for target_object in target_objects:
             smooth_camera.show_object(target_object)
-        perf_counter = time.perf_counter_ns()
+        perf_counter = time.perf_counter()
         while True:
 
             # Object update
-            delta_time = (time.perf_counter_ns() - perf_counter) / 1e9
-            perf_counter = time.perf_counter_ns()
+            delta_time = time.perf_counter() - perf_counter
+            perf_counter = time.perf_counter()
             for target_object in target_objects:
                 target_object.update(delta_time)
             smooth_camera.update(delta_time)

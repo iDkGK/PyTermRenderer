@@ -7,11 +7,8 @@ import zlib
 from functools import cached_property
 from pathlib import Path
 
+from exceptions import FileCorruptionError
 from hintings import ImagesType, ImageType, RowType
-
-
-class FileCorruptionError(Exception):
-    pass
 
 
 class PNG(object):
@@ -73,7 +70,7 @@ class PNG(object):
         """
         if self._decoded:
             return self
-        time_start = time.time()
+        time_start = time.perf_counter()
         index = self._binary_data.find(self.IDAT)
         if index == -1:
             raise FileCorruptionError("missing idat chunk. The image may be corrupted.")
@@ -375,12 +372,12 @@ class PNG(object):
                     "unknown color type. The image may be corrupted."
                 )
             self._image_data.append(rgba_row_pixel_tuples)
-        time_middle = time.time()
+        time_middle = time.perf_counter()
         if self._debug:
             for _ in range(0, self._height):
                 for _ in range(0, self._width):
                     pass
-            time_end = time.time()
+            time_end = time.perf_counter()
             processing_image_time_consuming = time_middle - time_start
             no_processing_image_time_consuming = time_end - time_middle
             if no_processing_image_time_consuming == 0:

@@ -6,6 +6,7 @@ from pathlib import Path
 from threading import Lock
 
 from decoder import PNG
+from exceptions import CameraScreenTooSmallError
 from hintings import (
     FrameType,
     FrustumBorderType,
@@ -723,7 +724,7 @@ class RotatingObject(Object):
                 TriangleNormalsType,
             ]
         ] = set()
-        time_factor = time.perf_counter_ns() / 1e9 * 360
+        time_factor = time.perf_counter() * 360
         round_per_second = 0.75
         sin_θ = math.sin(math.radians(time_factor * round_per_second))
         cos_θ = math.cos(math.radians(time_factor * round_per_second))
@@ -754,10 +755,6 @@ class RotatingObject(Object):
                 ),
             )
             self._triangles.add((vertices, textures, normals))
-
-
-class CameraScreenTooSmallError(Exception):
-    pass
 
 
 class Camera(object):
@@ -882,7 +879,7 @@ class Camera(object):
             from keyboard import KEY_DOWN, KEY_UP, KeyboardEvent
 
             active_states = {KEY_DOWN: True, KEY_UP: False, None: False}
-            time_counter = time.perf_counter_ns()
+            time_counter = time.perf_counter()
 
             def quit(event: KeyboardEvent) -> None:
                 self._quit_state = active_states.get(event.event_type, False)
@@ -892,18 +889,18 @@ class Camera(object):
 
             def switch_display_information(event: KeyboardEvent) -> None:
                 nonlocal time_counter
-                # Timeout using millisecond
-                if (time.perf_counter_ns() - time_counter) / 1e6 > 200:
-                    time_counter = time.perf_counter_ns()
+                # Timeout using second
+                if time.perf_counter() - time_counter > 0.2:
+                    time_counter = time.perf_counter()
                     self._display_information_state = (
                         not self._display_information_state
                     )
 
             def change_render_mode(event: KeyboardEvent) -> None:
                 nonlocal time_counter, render_mode_index
-                # Timeout using millisecond
-                if (time.perf_counter_ns() - time_counter) / 1e6 > 200:
-                    time_counter = time.perf_counter_ns()
+                # Timeout using second
+                if time.perf_counter() - time_counter > 0.2:
+                    time_counter = time.perf_counter()
                     render_mode_index = (render_mode_index + 1) % len(render_functions)
                     self._selected_render_mode = render_modes[render_mode_index]
                     self._selected_render_function = render_functions[render_mode_index]
