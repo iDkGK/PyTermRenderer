@@ -824,7 +824,7 @@ class Camera(object):
                 "If it's on Linux, install it via `pip install keyboard`. "
                 "Then run the `main.py` as root. "
             )
-            warnings.warn("Using custom KeyboardListener for camera controlling.")
+            warnings.warn("using custom KeyboardListener for camera controlling.")
         try:
             import mouse  # type: ignore
 
@@ -836,7 +836,7 @@ class Camera(object):
                 "If it's on Linux, install it via `pip install mouse`. "
                 "Then run the `main.py` as root. "
             )
-            warnings.warn("Using custom KeyboardListener for camera controlling.")
+            warnings.warn("using custom KeyboardListener for camera controlling.")
         # keyboard = mouse = None
         if keyboard is None or mouse is None:
             keyboard_listener = KeyboardListener()

@@ -9,20 +9,20 @@ from threading import Thread
 from exceptions import UnsupportedPlatformError
 
 
-def windows_wrapper(filepath: str, data: bytes, delay: float) -> None:
+def windows_wrapper(filepath: str, delay: float) -> None:
     import winsound
-    from winsound import SND_MEMORY  # type: ignore
+    from winsound import SND_ASYNC, SND_FILENAME  # type: ignore
 
     time.sleep(delay)
-    winsound.PlaySound(data, SND_MEMORY)  # type: ignore
+    winsound.PlaySound(filepath, SND_ASYNC | SND_FILENAME)
 
 
-def linux_wrapper(filepath: str, data: bytes, delay: float) -> None:
+def linux_wrapper(filepath: str, delay: float) -> None:
     time.sleep(delay)
     os.popen("aplay %s -q" % filepath)
 
 
-def macos_wrapper(filepath: str, data: bytes, delay: float) -> None:
+def macos_wrapper(filepath: str, delay: float) -> None:
     time.sleep(delay)
     os.popen("afplay %s -q 1" % filepath)
 
@@ -53,49 +53,40 @@ class WavePlayer(object):
             last_part_frames = (
                 wav_total_frames - (self._max_workers - 1) * per_part_frames
             )
-            async_pool_arguments: list[tuple[str, bytes, float]] = []
+            async_pool_arguments: list[tuple[str, float]] = []
             time_start = time.perf_counter()
             part_index = 0
             try:
                 for part_index in range(0, self._max_workers - 1):
                     part_filepath = tempfile.mktemp(suffix=".wav", prefix="tmp_PTR_")
-                    with (
-                        wave.open(part_filepath, "wb") as part_tmpfile,
-                        open(part_filepath, "rb") as temp_file,
-                    ):
+                    with wave.open(part_filepath, "wb") as part_tmpfile:
                         part_tmpfile.setparams(wav_params)
                         part_tmpfile.writeframes(wav.readframes(per_part_frames))
                         async_pool_arguments.append(
                             (
                                 part_filepath,
-                                temp_file.read(),
                                 part_index * per_part_time,
                             )
                         )
                 else:
                     part_filepath = tempfile.mktemp(suffix=".wav", prefix="tmp_PTR_")
-                    with (
-                        wave.open(part_filepath, "wb") as part_tmpfile,
-                        open(part_filepath, "rb") as temp_file,
-                    ):
+                    with wave.open(part_filepath, "wb") as part_tmpfile:
                         part_tmpfile.setparams(wav_params)
                         part_tmpfile.writeframes(wav.readframes(last_part_frames))
                         async_pool_arguments.append(
                             (
                                 part_filepath,
-                                temp_file.read(),
                                 (part_index + 1) * per_part_time,
                             )
                         )
                 # Process pool
                 futures: list[Future[None]] = []
                 async_time_start = time.perf_counter()
-                for part_filepath, part_data, part_delay in async_pool_arguments:
+                for part_filepath, part_delay in async_pool_arguments:
                     futures.append(
                         self._pool_executor.submit(
                             wrapper,
                             part_filepath,
-                            part_data,
                             (
                                 part_delay
                                 if part_delay == 0
@@ -104,7 +95,6 @@ class WavePlayer(object):
                             ),
                         )
                     )
-                list(map(lambda future: future.result(), futures))
                 remaining_time = wav_time - (time.perf_counter() - time_start)
                 if remaining_time > 0:
                     time.sleep(remaining_time)
