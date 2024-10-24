@@ -9,25 +9,24 @@ except ImportError:
     import tty
 
     _stdin_attributes = termios.tcgetattr(sys.stdin.fileno())  # type: ignore
-    _stdin_attributes[3] &= ~termios.ECHO  # suppress echo  # type: ignore
-    termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, _stdin_attributes)  # type: ignore
+
+    def _set_stdin_tty() -> None:
+        _stdin_attributes[3] &= ~termios.ECHO  # suppress echo  # type: ignore
+        termios.tcsetattr(_stdin_fd, termios.TCSANOW, _stdin_attributes)  # type: ignore
+        tty.setraw(_stdin_fd)  # type: ignore
 
     def _reset_stdin_tty() -> None:
         _stdin_attributes[3] |= termios.ECHO  # type: ignore
-        termios.tcsetattr(  # type: ignore
-            sys.stdin.fileno(),
-            termios.TCSANOW,  # type: ignore
-            _stdin_attributes,
-        )
+        tty.setcbreak(_stdin_fd)  # type: ignore
+        termios.tcsetattr(_stdin_fd, termios.TCSADRAIN, _stdin_attributes)  # type: ignore
 
     def getwch() -> str:
         """
         Gets a single character from STDIO.
         """
-        tty.setraw(sys.stdin.fileno())  # type: ignore
-        character = sys.stdin.read(1)
-        return character
+        return sys.stdin.read(1)
 
+    _set_stdin_tty()
     atexit.register(_reset_stdin_tty)
 
 
@@ -57,20 +56,20 @@ class KeyboardListener(metaclass=SingletonMeta):
         self._hit_key_counter = 0
         self._hit_key_queue: LifoQueue[str] = LifoQueue()
         self._callback_registry: dict[str, list[CallableType[..., AnyType]]] = {}
-        self._combination_keys: list[str] = []
+        self._escape_keys: list[str] = []
         self._listen_thread = Thread(target=self._listen, daemon=True)
         self._listen_thread.start()
 
     def _listen(self) -> None:
         while not self._stopping_event.is_set():
             hit_key = getwch()
-            if len(self._combination_keys) == 1:
-                self._combination_keys.append(hit_key)
-            if len(self._combination_keys) == 2:
-                hit_key = "".join(self._combination_keys)
-                self._combination_keys.clear()
+            if len(self._escape_keys) == 1:
+                self._escape_keys.append(hit_key)
+            if len(self._escape_keys) == 2:
+                hit_key = "".join(self._escape_keys)
+                self._escape_keys.clear()
             if hit_key == "\xe0":
-                self._combination_keys.append(hit_key)
+                self._escape_keys.append(hit_key)
             else:
                 self._hit_key_counter += 1
                 self._hit_key_queue.put_nowait(hit_key)
@@ -136,7 +135,10 @@ if __name__ == "__main__":
     while True:
         hit_key = keyboard_listener.get(block=True)
         hit_key_hex = hit_key.encode().hex()
-        print("\x1b[sHit Key: %s, Hex Code: %s\x1b[u" % (hit_key, hit_key_hex))
+        print(
+            "Hit Key: %s, Hex Code: %s" % (hit_key, hit_key_hex),
+            end="\r\n",
+        )
         if hit_key_hex in ("03", "1a", "1b", "1c"):
             keyboard_listener.stop()
             break

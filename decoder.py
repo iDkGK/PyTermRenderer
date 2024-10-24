@@ -388,13 +388,18 @@ class PNG(object):
                 )
             print(
                 "processing image time consuming: %ss."
-                % processing_image_time_consuming
+                % processing_image_time_consuming,
+                end="\r\n",
             )
             print(
                 "no processing image time consuming: %ss."
-                % no_processing_image_time_consuming
+                % no_processing_image_time_consuming,
+                end="\r\n",
             )
-            print("slow-down rate: %s x." % slow_down_rate)
+            print(
+                "slow-down rate: %s x." % slow_down_rate,
+                end="\r\n",
+            )
         self._decoded = True
         return self
 
@@ -661,7 +666,13 @@ if __name__ == "__main__":
     png_filepath = "resource/images/example.png"
     png_dirpath = "resource/images/sequence/tom&jerry"
     example_png = PNG(png_filepath, debug=True)
-    print("size of %s: %dx%d" % (example_png.image_path, *example_png.image_size))
+    print(
+        "size of %s: %dx%d" % (example_png.image_path, *example_png.image_size),
+        end="\r\n",
+    )
     example_png_sequence = PNGSequence(png_dirpath, debug=True)
     for example_png in example_png_sequence:
-        print("size of %s: %dx%d" % (example_png.image_path, *example_png.image_size))
+        print(
+            "size of %s: %dx%d" % (example_png.image_path, *example_png.image_size),
+            end="\r\n",
+        )
