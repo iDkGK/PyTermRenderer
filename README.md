@@ -23,10 +23,11 @@ PyTermRenderer, written in Python3, is a tool to display PNGs, or to render and 
   - `display_gray` - a function to display a frame of RGBA colors in grayscale mode
   - `display_rgba` - a function to display a frame with RGBA colored background
   - `clear_screen` - a function to clear terminal screen
-- exceptions.py - providing different kinds of Exception classes
-- hintings.py - custom type bindings for IDE level type hinting
+- entity.py - providing class of different kinds of entity object
+- exception.py - providing different kinds of Exception classes
+- hinting.py - custom type bindings for IDE level type hinting
 - main.py - the entry point of this project
-- utilities.py - providing some handy functions or classes
+- utility.py - providing some handy functions
   - ...
 
 ## Features

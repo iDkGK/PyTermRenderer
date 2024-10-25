@@ -33,8 +33,8 @@ except ImportError:
 from queue import LifoQueue
 from threading import Event, Thread
 
-from exceptions import AlreadyExitedError, AlreadyInstantiatedError
-from hintings import AnyType, CallableType
+from exception import AlreadyExitedError, AlreadyInstantiatedError
+from hinting import AnyType, CallableType
 
 
 class SingletonMeta(type):

@@ -7,8 +7,8 @@ import zlib
 from functools import cached_property
 from pathlib import Path
 
-from exceptions import FileCorruptionError
-from hintings import ImagesType, ImageType, RowType
+from exception import FileCorruptionError
+from hinting import ImagesType, ImageType, RowType
 
 
 class PNG(object):

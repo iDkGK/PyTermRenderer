@@ -5,9 +5,9 @@ import time
 from datetime import datetime
 
 from decoder import PNGSequence
-from exceptions import InvalidEffectModeError
-from hintings import EffectModeType, FramesType, FrameType, RowType
-from utilities import Camera, Object, RotatingObject, SmoothCamera  # type: ignore
+from exception import InvalidEffectModeError
+from hinting import EffectModeType, FramesType, FrameType, RowType
+from entity import Camera, Object, RotatingObject, SmoothCamera  # type: ignore
 
 ASCII_CHARACTERS = "".join((string.digits, string.ascii_letters, string.punctuation))
 BINARY_CHARACTERS = "01" * 32

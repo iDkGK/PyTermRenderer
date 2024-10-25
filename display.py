@@ -5,7 +5,7 @@ import os
 import time
 from collections import deque
 
-from hintings import FrameType
+from hinting import FrameType
 
 """
 "\x1b[39m\x1b[39m"                 - Reset color

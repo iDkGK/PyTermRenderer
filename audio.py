@@ -6,7 +6,7 @@ import wave
 from concurrent.futures import Future, ProcessPoolExecutor
 from threading import Thread
 
-from exceptions import UnsupportedPlatformError
+from exception import UnsupportedPlatformError
 
 
 def windows_wrapper(filepath: str, delay: float) -> None:

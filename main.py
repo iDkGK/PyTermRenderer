@@ -15,8 +15,8 @@ from display import (
     display_gray,
     display_rgba,
 )
-from exceptions import InvalidLockStatusError
-from hintings import FramesType
+from exception import InvalidLockStatusError
+from hinting import FramesType
 
 
 def play_code_rain_animation(fps: int = 15) -> None:
