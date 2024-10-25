@@ -460,7 +460,7 @@ class Camera(object):
             rotate_lock = Lock()
             mouse.move(self._screen_width, self._screen_height)  # type: ignore
 
-            def rotate(event: ButtonEvent | WheelEvent | MoveEvent) -> None:
+            def rotate(event: ButtonEvent | WheelEvent | MoveEvent) -> None:  # type: ignore
                 if not rotate_lock.acquire(blocking=False):
                     return
                 while True:
@@ -468,7 +468,7 @@ class Camera(object):
                         mouse.move(self._screen_width, self._screen_height)  # type: ignore
                     else:
                         break
-                event_type = type(event)
+                event_type = type(event)  # type: ignore
                 if event_type == MoveEvent:
                     self._rotate_view(
                         yaw=-(event.y - self._screen_height) / 72,  # type: ignore
@@ -499,30 +499,30 @@ class Camera(object):
                 self._selected_render_function = render_functions[render_mode_index]
 
             # Quiting & resetting
-            keyboard_listener.register("\x1b", stop_and_quit_legacy)
-            keyboard_listener.register("r", self._reset)
+            keyboard_listener.register(("\x1b",), (stop_and_quit_legacy,))
+            keyboard_listener.register(("r",), (self._reset,))
             # Miscellaneous
-            keyboard_listener.register("i", switch_display_information_legacy)
-            keyboard_listener.register("p", change_render_mode_legacy)
+            keyboard_listener.register(("i",), (switch_display_information_legacy,))
+            keyboard_listener.register(("p",), (change_render_mode_legacy,))
             # Position
-            keyboard_listener.register("W", self._dash_forward)
-            keyboard_listener.register("w", self._move_forward)
-            keyboard_listener.register("S", self._dash_backward)
-            keyboard_listener.register("s", self._move_backward)
-            keyboard_listener.register("A", self._dash_leftward)
-            keyboard_listener.register("a", self._move_leftward)
-            keyboard_listener.register("D", self._dash_rightward)
-            keyboard_listener.register("d", self._move_rightward)
-            keyboard_listener.register(" ", self._move_upward)
-            keyboard_listener.register("\r", self._move_downward)
+            keyboard_listener.register(("W",), (self._dash_forward,))
+            keyboard_listener.register(("w",), (self._move_forward,))
+            keyboard_listener.register(("S",), (self._dash_backward,))
+            keyboard_listener.register(("s",), (self._move_backward,))
+            keyboard_listener.register(("A",), (self._dash_leftward,))
+            keyboard_listener.register(("a",), (self._move_leftward,))
+            keyboard_listener.register(("D",), (self._dash_rightward,))
+            keyboard_listener.register(("d",), (self._move_rightward,))
+            keyboard_listener.register((" ",), (self._move_upward,))
+            keyboard_listener.register(("\r",), (self._move_downward,))
             # Rotation
-            keyboard_listener.register("8", self._yaw_forward)
-            keyboard_listener.register("2", self._yaw_reverse)
-            keyboard_listener.register("6", self._pitch_forward)
-            keyboard_listener.register("4", self._pitch_reverse)
+            keyboard_listener.register(("8",), (self._yaw_forward,))
+            keyboard_listener.register(("2",), (self._yaw_reverse,))
+            keyboard_listener.register(("6",), (self._pitch_forward,))
+            keyboard_listener.register(("4",), (self._pitch_reverse,))
             # View
-            keyboard_listener.register("+", self._fov_increase)
-            keyboard_listener.register("-", self._fov_decrease)
+            keyboard_listener.register(("+",), (self._fov_increase,))
+            keyboard_listener.register(("-",), (self._fov_decrease,))
 
     # Reset methods
     def _reset(self) -> None:

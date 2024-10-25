@@ -4,6 +4,7 @@ from typing import Any, Callable, Iterable, Literal
 # Simple type aliases
 AnyType = Any
 CallableType = Callable
+IterableType = Iterable
 
 # Complex type aliases
 RowType = list[tuple[int, ...]]

@@ -34,7 +34,7 @@ from queue import LifoQueue
 from threading import Event, Thread
 
 from exception import AlreadyExitedError, AlreadyInstantiatedError
-from hinting import AnyType, CallableType
+from hinting import AnyType, CallableType, IterableType
 
 
 class SingletonMeta(type):
@@ -99,46 +99,53 @@ class KeyboardListener(metaclass=SingletonMeta):
 
     def register(
         self,
-        key: str,
-        callback: CallableType[..., AnyType],
-        update: bool = False,
+        keys: IterableType[str],
+        callbacks: IterableType[CallableType[..., AnyType]],
+        override: bool = False,
     ) -> None:
         if self._stopping_event.is_set():
             raise AlreadyExitedError(
-                "attempted to register callback with an exited KeyboardListener object"
+                "attempted to register key-callbacks to an exited KeyboardListener object"
             )
-        if update:
-            self._callback_registry[key] = [callback]
-        else:
-            self._callback_registry.setdefault(key, [])
-            self._callback_registry[key].append(callback)
+        callback_list = list(callbacks)
+        for key in keys:
+            if override:
+                self._callback_registry[key] = callback_list
+            else:
+                self._callback_registry.setdefault(key, [])
+                self._callback_registry[key] += callback_list
 
-    def unregister(self, key: str, callback: CallableType[..., AnyType]) -> None:
+    def unregister(
+        self,
+        keys: IterableType[str],
+        callbacks: IterableType[CallableType[..., AnyType]],
+    ) -> None:
         if self._stopping_event.is_set():
             raise AlreadyExitedError(
-                "attempted to unregister callback with an exited KeyboardListener object"
+                "attempted to unregister callbacks from an exited KeyboardListener object"
             )
-        if key in self._callback_registry and callback in self._callback_registry[key]:
-            self._callback_registry[key].remove(callback)
-
-    def unregister_all(self, key: str) -> None:
-        if self._stopping_event.is_set():
-            raise AlreadyExitedError(
-                "attempted to unregister all callbacks an with exited KeyboardListener object"
-            )
-        if key in self._callback_registry:
-            del self._callback_registry[key]
+        callback_list = list(callbacks)
+        for key in keys:
+            if key in self._callback_registry:
+                for callback in callback_list:
+                    if callback in self._callback_registry[key]:
+                        del self._callback_registry[key][
+                            self._callback_registry[key].index(callback)
+                        ]
+                if len(self._callback_registry[key]) == 0:
+                    del self._callback_registry[key]
 
 
 if __name__ == "__main__":
+    stop_keys = ("\x03", "\x1a", "\x1b", "\x1c")
     keyboard_listener = KeyboardListener()
+    keyboard_listener.register(stop_keys, (keyboard_listener.stop,))
     while True:
         hit_key = keyboard_listener.get(block=True)
         hit_key_hex = hit_key.encode().hex()
+        if not hit_key:
+            break
         print(
             "Hit Key: %s, Hex Code: %s" % (hit_key, hit_key_hex),
             end="\r\n",
         )
-        if hit_key_hex in ("03", "1a", "1b", "1c"):
-            keyboard_listener.stop()
-            break
